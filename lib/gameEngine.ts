@@ -110,6 +110,11 @@ export class GameEngine {
     // Remove a die from the loser
     this.removeDieFromPlayer(loserId)
 
+    // Start a new round if the game isn't over
+    if (!this.gameState.is_game_over) {
+      this.startNewRound()
+    }
+
     return { success: true, challengeSuccessful, loserId }
   }
 

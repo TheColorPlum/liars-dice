@@ -10,7 +10,7 @@ interface GameContextType {
   match: Match | null
   loading: boolean
   error: string | null
-  startSinglePlayerGame: (aiDifficulty: 'easy' | 'medium' | 'hard') => void
+  startSinglePlayerGame: (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number) => void
   makeMove: (move: GameMove) => Promise<boolean>
   resetGame: () => void
 }
@@ -86,13 +86,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(gameReducer, initialState)
 
   // Start a single player game
-  const startSinglePlayerGame = (aiDifficulty: 'easy' | 'medium' | 'hard') => {
+  const startSinglePlayerGame = (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number = 4) => {
     dispatch({ type: 'SET_LOADING', payload: true })
 
     try {
-      // Create AI players
+      // Create AI players (playerCount - 1, since human is 1 player)
       const aiPlayers: Player[] = []
-      for (let i = 1; i <= 3; i++) {
+      const numAI = Math.min(Math.max(playerCount - 1, 1), 5) // 1-5 AI players
+      
+      for (let i = 1; i <= numAI; i++) {
         aiPlayers.push({
           id: `ai_${i}`,
           username: `AI Player ${i}`,
@@ -182,13 +184,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const processAIMoves = async () => {
     if (!state.gameEngine || !state.gameState) return
 
-    let currentState = state.gameEngine.getGameState()
     const gameEngine = state.gameEngine
+    let currentState = gameEngine.getGameState()
+    let moveCount = 0
+    const maxMoves = 20 // Prevent infinite loops
 
-    while (!currentState.is_game_over) {
+    while (!currentState.is_game_over && moveCount < maxMoves) {
       const currentPlayer = gameEngine.getCurrentPlayer()
       
       if (!currentPlayer || !currentPlayer.is_ai) break
+
+      console.log(`AI ${currentPlayer.username} is making move ${moveCount + 1}`)
 
       const aiEngine = new AIEngine(currentPlayer.ai_difficulty || 'medium')
       const activePlayers = gameEngine.getActivePlayers()
@@ -202,14 +208,29 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           isEndGame
         )
 
+        console.log(`AI ${currentPlayer.username} decision:`, aiMove)
+
+        let moveSuccess = false
         if (aiMove.shouldChallenge) {
-          gameEngine.challengeBid(currentPlayer.id)
+          const result = gameEngine.challengeBid(currentPlayer.id)
+          moveSuccess = result.success
+          console.log(`Challenge result:`, result)
         } else if (aiMove.bid) {
-          gameEngine.makeBid(currentPlayer.id, aiMove.bid)
+          moveSuccess = gameEngine.makeBid(currentPlayer.id, aiMove.bid)
+          console.log(`Bid result:`, moveSuccess, aiMove.bid)
+        }
+
+        if (!moveSuccess) {
+          console.error('AI move failed, breaking loop')
+          break
         }
 
         currentState = gameEngine.getGameState()
         dispatch({ type: 'UPDATE_GAME_STATE', payload: currentState })
+        moveCount++
+
+        // Add a small delay between AI moves for better UX
+        await new Promise(resolve => setTimeout(resolve, 500))
 
         // Break if game is over or it's human player's turn
         if (currentState.is_game_over || !gameEngine.getCurrentPlayer()?.is_ai) {
@@ -220,6 +241,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         console.error('AI move error:', error)
         break
       }
+    }
+
+    if (moveCount >= maxMoves) {
+      console.warn('AI move loop reached maximum iterations')
     }
   }
 
