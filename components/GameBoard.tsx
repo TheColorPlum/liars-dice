@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
 import { useGame } from '../contexts/GameContext'
 import { Bid } from '../types/game'
@@ -11,8 +11,29 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
-  const { gameState, gameEngine, makeMove, resetGame } = useGame()
+  const { gameState, gameEngine, makeMove, processAIMove, resetGame } = useGame()
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
+
+  // Handle AI moves - similar to working implementation
+  useEffect(() => {
+    if (gameState && 
+        gameEngine &&
+        !gameState.is_game_over &&
+        gameState.phase === 'bidding') {
+      
+      const currentPlayer = gameEngine.getCurrentPlayer()
+      
+      if (currentPlayer && currentPlayer.is_ai) {
+        console.log(`It's ${currentPlayer.username}'s turn (AI)`)
+        
+        const aiMoveTimeout = setTimeout(() => {
+          processAIMove()
+        }, 1000)
+
+        return () => clearTimeout(aiMoveTimeout)
+      }
+    }
+  }, [gameState, gameEngine, processAIMove])
 
   if (!gameState || !gameEngine) {
     return (
