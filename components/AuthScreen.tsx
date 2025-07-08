@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
+import { OfflineNotice } from './OfflineNotice'
 
 export const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -49,6 +50,7 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <OfflineNotice />
       <View style={styles.header}>
         <Text style={styles.title}>Liar's Dice</Text>
         <Text style={styles.subtitle}>
