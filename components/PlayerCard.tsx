@@ -1,6 +1,7 @@
-import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, Animated } from 'react-native'
 import { Player } from '../types/game'
+import { CasinoTheme } from '../lib/theme'
 
 interface PlayerCardProps {
   player: Player
@@ -13,49 +14,103 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   isCurrentPlayer,
   isHumanPlayer
 }) => {
-  const renderDiceCount = () => {
-    const diceIcons = []
-    for (let i = 0; i < player.dice_count; i++) {
-      diceIcons.push(
-        <View key={i} style={styles.diceIcon}>
-          <Text style={styles.diceText}>⚀</Text>
-        </View>
-      )
+  const [glowAnim] = useState(new Animated.Value(0))
+
+  useEffect(() => {
+    if (isCurrentPlayer) {
+      // Glow animation when becoming current player
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.7,
+          duration: 500,
+          useNativeDriver: false,
+        })
+      ]).start()
+    } else {
+      // Fade out glow when no longer current player
+      Animated.timing(glowAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start()
     }
-    return diceIcons
+  }, [isCurrentPlayer])
+
+  const getDiceCountStyle = () => {
+    if (player.dice_count <= 1) {
+      return styles.criticalDiceCount
+    } else if (player.dice_count === 2) {
+      return styles.lowDiceCount
+    } else {
+      return styles.normalDiceCount
+    }
   }
 
+  const getDiceCountBadgeStyle = () => {
+    if (player.dice_count <= 1) {
+      return styles.criticalBadge
+    } else if (player.dice_count === 2) {
+      return styles.lowBadge
+    } else {
+      return styles.normalBadge
+    }
+  }
+
+  const animatedGlowColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(76, 175, 80, 0)', 'rgba(76, 175, 80, 0.3)']
+  })
+
   return (
-    <View style={[
+    <Animated.View style={[
       styles.container,
       isCurrentPlayer && styles.currentPlayerContainer,
-      !player.is_active && styles.inactiveContainer
+      !player.is_active && styles.inactiveContainer,
+      isCurrentPlayer && { 
+        shadowColor: '#4CAF50',
+        shadowOpacity: glowAnim,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 6,
+      }
     ]}>
       <View style={styles.playerInfo}>
-        <Text style={[
-          styles.playerName,
-          isHumanPlayer && styles.humanPlayerName
-        ]}>
-          {player.username}
-          {player.is_ai && (
-            <Text style={styles.aiLabel}> (AI)</Text>
-          )}
-        </Text>
-        
-        <View style={styles.statusContainer}>
-          <Text style={styles.diceCount}>
-            {player.dice_count} dice
+        <View style={styles.nameRow}>
+          <Text style={[
+            styles.playerName,
+            isHumanPlayer && styles.humanPlayerName
+          ]}>
+            {player.username}
           </Text>
+          {player.is_ai && (
+            <Text style={styles.aiLabel}>AI</Text>
+          )}
+        </View>
+        
+        <View style={styles.statusRow}>
+          <View style={[styles.diceCountBadge, getDiceCountBadgeStyle()]}>
+            <Text style={[styles.diceCountNumber, getDiceCountStyle()]}>
+              {player.dice_count}
+            </Text>
+            <Text style={styles.diceLabel}>dice</Text>
+          </View>
           {!player.is_active && (
-            <Text style={styles.eliminatedText}>ELIMINATED</Text>
+            <Text style={styles.eliminatedText}>OUT</Text>
           )}
         </View>
       </View>
 
-      <View style={styles.diceContainer}>
-        {renderDiceCount()}
-      </View>
-    </View>
+      {isCurrentPlayer && (
+        <View style={styles.currentPlayerIndicator}>
+          <Text style={styles.currentPlayerText}>▶</Text>
+        </View>
+      )}
+    </Animated.View>
   )
 }
 
@@ -64,68 +119,116 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#2a2a2a',
-    padding: 15,
-    marginVertical: 5,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    backgroundColor: CasinoTheme.colors.charcoal,
+    padding: CasinoTheme.spacing.md,
+    marginVertical: CasinoTheme.spacing.xs,
+    borderRadius: CasinoTheme.borderRadius.md,
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.goldDark,
+    ...CasinoTheme.shadows.medium,
   },
   currentPlayerContainer: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#2a3a2a',
+    borderColor: CasinoTheme.colors.gold,
+    backgroundColor: CasinoTheme.colors.charcoalLight,
+    borderWidth: 4,
+    ...CasinoTheme.shadows.large,
   },
   inactiveContainer: {
-    opacity: 0.5,
-    backgroundColor: '#1a1a1a',
+    opacity: 0.6,
+    backgroundColor: CasinoTheme.colors.charcoalDark,
+    borderColor: CasinoTheme.colors.gray,
   },
   playerInfo: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: CasinoTheme.spacing.xs,
+  },
   playerName: {
-    color: '#fff',
+    color: CasinoTheme.colors.cream,
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 5,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.body,
   },
   humanPlayerName: {
-    color: '#4CAF50',
+    color: CasinoTheme.colors.gold,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
   aiLabel: {
-    color: '#FF9800',
-    fontSize: 14,
-    fontWeight: 'normal',
+    color: CasinoTheme.colors.charcoalDark,
+    fontSize: 10,
+    fontWeight: 'bold',
+    backgroundColor: CasinoTheme.colors.orange,
+    paddingHorizontal: CasinoTheme.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: CasinoTheme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: CasinoTheme.colors.orangeLight,
+    ...CasinoTheme.fonts.body,
   },
-  statusContainer: {
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'space-between',
   },
-  diceCount: {
-    color: '#ccc',
-    fontSize: 16,
+  currentPlayerIndicator: {
+    marginLeft: CasinoTheme.spacing.sm,
+  },
+  currentPlayerText: {
+    color: CasinoTheme.colors.gold,
+    fontSize: 18,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.header,
+  },
+  diceCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: CasinoTheme.spacing.sm,
+    paddingVertical: CasinoTheme.spacing.xs,
+    borderRadius: CasinoTheme.borderRadius.lg,
+    gap: CasinoTheme.spacing.xs,
+    borderWidth: 2,
+  },
+  diceCountNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.numbers,
+  },
+  diceLabel: {
+    fontSize: 12,
+    color: CasinoTheme.colors.creamDark,
+    ...CasinoTheme.fonts.body,
+  },
+  normalDiceCount: {
+    color: CasinoTheme.colors.cream,
+  },
+  lowDiceCount: {
+    color: CasinoTheme.colors.orangeLight,
+  },
+  criticalDiceCount: {
+    color: CasinoTheme.colors.casinoRedLight,
+  },
+  normalBadge: {
+    backgroundColor: CasinoTheme.colors.casinoGreenDark,
+    borderColor: CasinoTheme.colors.casinoGreen,
+  },
+  lowBadge: {
+    backgroundColor: CasinoTheme.colors.orange + '40', // 25% opacity
+    borderColor: CasinoTheme.colors.orangeLight,
+  },
+  criticalBadge: {
+    backgroundColor: CasinoTheme.colors.casinoRedDark,
+    borderColor: CasinoTheme.colors.casinoRed,
   },
   eliminatedText: {
-    color: '#f44336',
+    color: CasinoTheme.colors.casinoRedLight,
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  diceContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 5,
-    maxWidth: 100,
-  },
-  diceIcon: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#444',
-    borderRadius: 4,
-  },
-  diceText: {
-    color: '#fff',
-    fontSize: 12,
+    ...CasinoTheme.fonts.body,
   },
 })

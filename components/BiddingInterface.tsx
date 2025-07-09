@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Bid } from '../types/game'
+import { QuantityStepper } from './QuantityStepper'
+import { CasinoTheme, getButtonStyle } from '../lib/theme'
 
 interface BiddingInterfaceProps {
   currentBid: Bid | null
@@ -15,15 +17,49 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
   onChallenge,
   totalDice
 }) => {
+  // Calculate smart initial values and bounds
+  const getSmartBounds = () => {
+    if (!currentBid) {
+      // First bid: reasonable range based on total dice
+      const minQuantity = 1
+      const maxQuantity = Math.max(Math.floor(totalDice * 0.6), 8) // 60% of total dice or 8, whichever is higher
+      return { min: minQuantity, max: maxQuantity, initial: Math.max(Math.floor(totalDice * 0.15), 2) }
+    } else {
+      // Subsequent bids: must be higher than current
+      const minQuantity = currentBid.quantity
+      const maxQuantity = Math.min(totalDice, currentBid.quantity + Math.max(Math.floor(totalDice * 0.3), 5))
+      return { min: minQuantity, max: maxQuantity, initial: currentBid.quantity + 1 }
+    }
+  }
+
   const [selectedQuantity, setSelectedQuantity] = useState(1)
-  const [selectedFaceValue, setSelectedFaceValue] = useState(1)
+  const [selectedFaceValue, setSelectedFaceValue] = useState(2) // Start at 2 since 1s are wild
+
+  // Update bounds and selected quantity when currentBid changes
+  useEffect(() => {
+    const bounds = getSmartBounds()
+    setSelectedQuantity(bounds.initial)
+  }, [currentBid, totalDice])
 
   const isValidBid = (quantity: number, faceValue: number): boolean => {
+    // 1s are wild and cannot be bid on
+    if (faceValue < 2 || faceValue > 6) {
+      return false
+    }
+
+    if (quantity <= 0) {
+      return false
+    }
+
     if (!currentBid) return true
     
     if (quantity > currentBid.quantity) {
       return true
     } else if (quantity === currentBid.quantity) {
+      // Cannot bid same quantity and higher face value if current is already 6
+      if (currentBid.face_value === 6) {
+        return false
+      }
       return faceValue > currentBid.face_value
     }
     
@@ -40,37 +76,12 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
     }
   }
 
-  const renderQuantityButtons = () => {
-    const buttons = []
-    const maxQuantity = Math.min(totalDice, currentBid ? currentBid.quantity + 3 : 5)
-    
-    for (let i = 1; i <= maxQuantity; i++) {
-      buttons.push(
-        <TouchableOpacity
-          key={i}
-          style={[
-            styles.quantityButton,
-            selectedQuantity === i && styles.selectedButton
-          ]}
-          onPress={() => setSelectedQuantity(i)}
-        >
-          <Text style={[
-            styles.buttonText,
-            selectedQuantity === i && styles.selectedButtonText
-          ]}>
-            {i}
-          </Text>
-        </TouchableOpacity>
-      )
-    }
-    
-    return buttons
-  }
 
   const renderFaceValueButtons = () => {
     const buttons = []
     
-    for (let i = 1; i <= 6; i++) {
+    // Start from 2 since 1s are wild and cannot be bid on
+    for (let i = 2; i <= 6; i++) {
       buttons.push(
         <TouchableOpacity
           key={i}
@@ -95,15 +106,47 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Make Your Move</Text>
-      
-      <View style={styles.selectionContainer}>
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Quantity</Text>
-          <View style={styles.quantityContainer}>
-            {renderQuantityButtons()}
-          </View>
+      {/* Current Bid and Selected Bid Row */}
+      <View style={styles.topRow}>
+        <View style={styles.bidInfo}>
+          <Text style={styles.selectedBidLabel}>Your Bid:</Text>
+          <Text style={styles.selectedBidText}>
+            {selectedQuantity} × {selectedFaceValue}
+          </Text>
         </View>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[
+              styles.bidButton,
+              !isValidBid(selectedQuantity, selectedFaceValue) && styles.disabledButton
+            ]}
+            onPress={handleMakeBid}
+            disabled={!isValidBid(selectedQuantity, selectedFaceValue)}
+          >
+            <Text style={styles.bidButtonText}>Bid</Text>
+          </TouchableOpacity>
+
+          {currentBid && (
+            <TouchableOpacity
+              style={styles.challengeButton}
+              onPress={onChallenge}
+            >
+              <Text style={styles.challengeButtonText}>Challenge</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Selection Controls */}
+      <View style={styles.selectionRow}>
+        <QuantityStepper
+          value={selectedQuantity}
+          onValueChange={setSelectedQuantity}
+          min={getSmartBounds().min}
+          max={getSmartBounds().max}
+          totalDice={totalDice}
+          label="Quantity"
+        />
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Face Value</Text>
@@ -112,153 +155,137 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
           </View>
         </View>
       </View>
-
-      <View style={styles.selectedBidContainer}>
-        <Text style={styles.selectedBidLabel}>Your Bid:</Text>
-        <Text style={styles.selectedBidText}>
-          {selectedQuantity} x {selectedFaceValue}
-        </Text>
-      </View>
-
-      <View style={styles.actionContainer}>
-        <TouchableOpacity
-          style={[
-            styles.bidButton,
-            !isValidBid(selectedQuantity, selectedFaceValue) && styles.disabledButton
-          ]}
-          onPress={handleMakeBid}
-          disabled={!isValidBid(selectedQuantity, selectedFaceValue)}
-        >
-          <Text style={styles.bidButtonText}>Make Bid</Text>
-        </TouchableOpacity>
-
-        {currentBid && (
-          <TouchableOpacity
-            style={styles.challengeButton}
-            onPress={onChallenge}
-          >
-            <Text style={styles.challengeButtonText}>Challenge</Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#2a2a2a',
-    padding: 20,
-    margin: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#333',
+    backgroundColor: CasinoTheme.colors.charcoal,
+    padding: CasinoTheme.spacing.lg,
+    marginHorizontal: CasinoTheme.spacing.md,
+    marginBottom: CasinoTheme.spacing.md,
+    borderRadius: CasinoTheme.borderRadius.lg,
+    borderWidth: 4,
+    borderColor: CasinoTheme.colors.gold,
+    borderTopWidth: 6,
+    borderTopColor: CasinoTheme.colors.goldLight,
+    ...CasinoTheme.shadows.large,
   },
-  title: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: CasinoTheme.spacing.lg,
+    paddingBottom: CasinoTheme.spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: CasinoTheme.colors.goldDark,
   },
-  selectionContainer: {
-    marginBottom: 20,
+  bidInfo: {
+    flex: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: CasinoTheme.spacing.md,
+  },
+  selectionRow: {
+    flexDirection: 'row',
+    gap: CasinoTheme.spacing.xl,
   },
   sectionContainer: {
-    marginBottom: 15,
+    flex: 1,
   },
   sectionTitle: {
-    color: '#ccc',
+    color: CasinoTheme.colors.gold,
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  quantityContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    gap: 5,
+    fontWeight: 'bold',
+    marginBottom: CasinoTheme.spacing.sm,
+    textAlign: 'center',
+    ...CasinoTheme.fonts.header,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
   faceValueContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     flexWrap: 'wrap',
-    gap: 5,
-  },
-  quantityButton: {
-    backgroundColor: '#444',
-    padding: 10,
-    borderRadius: 8,
-    minWidth: 40,
-    alignItems: 'center',
+    gap: CasinoTheme.spacing.xs,
   },
   faceButton: {
-    backgroundColor: '#444',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: CasinoTheme.colors.charcoalLight,
+    padding: CasinoTheme.spacing.sm,
+    borderRadius: CasinoTheme.borderRadius.sm,
     minWidth: 40,
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.goldDark,
+    ...CasinoTheme.shadows.small,
   },
   selectedButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: CasinoTheme.colors.gold,
+    borderColor: CasinoTheme.colors.goldLight,
   },
   buttonText: {
-    color: '#fff',
+    color: CasinoTheme.colors.cream,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.numbers,
   },
   selectedButtonText: {
-    color: '#fff',
-  },
-  selectedBidContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
+    color: CasinoTheme.colors.charcoalDark,
   },
   selectedBidLabel: {
-    color: '#ccc',
-    fontSize: 14,
-    marginBottom: 5,
+    color: CasinoTheme.colors.goldLight,
+    fontSize: 16,
+    marginBottom: CasinoTheme.spacing.xs,
+    ...CasinoTheme.fonts.body,
   },
   selectedBidText: {
-    color: '#4CAF50',
+    color: CasinoTheme.colors.gold,
     fontSize: 24,
     fontWeight: 'bold',
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 10,
+    ...CasinoTheme.fonts.numbers,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
   bidButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    flex: 1,
+    backgroundColor: CasinoTheme.colors.gold,
+    paddingVertical: CasinoTheme.spacing.md,
+    paddingHorizontal: CasinoTheme.spacing.lg,
+    borderRadius: CasinoTheme.borderRadius.md,
     alignItems: 'center',
+    minWidth: 100,
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.goldDark,
+    ...CasinoTheme.shadows.medium,
   },
   disabledButton: {
-    backgroundColor: '#666',
+    backgroundColor: CasinoTheme.colors.gray,
+    borderColor: CasinoTheme.colors.grayDark,
   },
   bidButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: CasinoTheme.colors.charcoalDark,
+    fontSize: 18,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.header,
   },
   challengeButton: {
-    backgroundColor: '#f44336',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    flex: 1,
+    backgroundColor: CasinoTheme.colors.casinoRed,
+    paddingVertical: CasinoTheme.spacing.md,
+    paddingHorizontal: CasinoTheme.spacing.lg,
+    borderRadius: CasinoTheme.borderRadius.md,
     alignItems: 'center',
+    minWidth: 100,
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.casinoRedDark,
+    ...CasinoTheme.shadows.medium,
   },
   challengeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: CasinoTheme.colors.cream,
+    fontSize: 18,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.header,
   },
 })

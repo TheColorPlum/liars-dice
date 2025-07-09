@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
 import { useGame } from '../contexts/GameContext'
-import { Bid } from '../types/game'
+import { Bid, Player } from '../types/game'
+import { CasinoTheme, getContainerStyle } from '../lib/theme'
 import { PlayerCard } from './PlayerCard'
 import { DiceDisplay } from './DiceDisplay'
 import { BiddingInterface } from './BiddingInterface'
+import { GameHistory } from './GameHistory'
+import { ChallengeResult } from './ChallengeResult'
+import { TurnIndicator } from './TurnIndicator'
+import { RoundTransition } from './RoundTransition'
 
 interface GameBoardProps {
   onBack: () => void
@@ -13,6 +18,23 @@ interface GameBoardProps {
 export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
   const { gameState, gameEngine, makeMove, processAIMove, resetGame } = useGame()
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
+  const [showChallengeResult, setShowChallengeResult] = useState(false)
+  const [challengeResultData, setChallengeResultData] = useState<{
+    challengedBid: Bid | null
+    actualCount: number
+    challengeSuccessful: boolean
+    challengerName: string
+    bidderName: string
+  } | null>(null)
+  const [showRoundTransition, setShowRoundTransition] = useState(false)
+  const [roundTransitionData, setRoundTransitionData] = useState<{
+    type: 'round_start' | 'player_eliminated' | 'round_end' | 'game_over'
+    eliminatedPlayer?: Player | null
+    roundNumber?: number
+    winnerName?: string
+  } | null>(null)
+  const [lastRoundNumber, setLastRoundNumber] = useState(1)
+  const [lastActivePlayers, setLastActivePlayers] = useState<string[]>([])
 
   // Handle AI moves - similar to working implementation
   useEffect(() => {
@@ -26,14 +48,106 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
       if (currentPlayer && currentPlayer.is_ai) {
         console.log(`It's ${currentPlayer.username}'s turn (AI)`)
         
+        // Faster delay for single player mode
+        const humanPlayers = gameState.players.filter(p => !p.is_ai)
+        const isSinglePlayer = humanPlayers.length === 1
+        const delay = isSinglePlayer ? 300 : 1000  // 0.3s for single player, 1s for multiplayer
+        
         const aiMoveTimeout = setTimeout(() => {
           processAIMove()
-        }, 1000)
+        }, delay)
 
         return () => clearTimeout(aiMoveTimeout)
       }
     }
   }, [gameState, gameEngine, processAIMove])
+
+  // Watch for challenge actions to show results
+  useEffect(() => {
+    if (gameEngine) {
+      const actions = gameEngine.getActions()
+      const lastAction = actions[actions.length - 1]
+      
+      if (lastAction && lastAction.type === 'challenge' && lastAction.data) {
+        const challengeData = lastAction.data as {
+          bid: Bid
+          total_dice: number
+          successful: boolean
+        }
+        
+        const challengerName = gameState?.players.find(p => p.id === lastAction.player_id)?.username || 'Unknown'
+        const bidderName = gameState?.players.find(p => p.id === challengeData.bid.player_id)?.username || 'Unknown'
+        
+        setChallengeResultData({
+          challengedBid: challengeData.bid,
+          actualCount: challengeData.total_dice,
+          challengeSuccessful: challengeData.successful,
+          challengerName,
+          bidderName
+        })
+        setShowChallengeResult(true)
+      }
+    }
+  }, [gameEngine?.getActions().length, gameState?.players])
+
+  // Watch for round changes and player eliminations
+  useEffect(() => {
+    if (!gameState) return
+
+    const currentActivePlayers = gameState.players
+      .filter(p => p.is_active)
+      .map(p => p.id)
+    
+    // Check for player elimination
+    if (lastActivePlayers.length > 0 && currentActivePlayers.length < lastActivePlayers.length) {
+      const eliminatedPlayerIds = lastActivePlayers.filter(id => !currentActivePlayers.includes(id))
+      
+      if (eliminatedPlayerIds.length > 0) {
+        const eliminatedPlayer = gameState.players.find(p => eliminatedPlayerIds.includes(p.id))
+        
+        if (eliminatedPlayer) {
+          setRoundTransitionData({
+            type: 'player_eliminated',
+            eliminatedPlayer
+          })
+          setShowRoundTransition(true)
+        }
+      }
+    }
+
+    // Check for round change
+    if (gameState.round_number > lastRoundNumber) {
+      setRoundTransitionData({
+        type: 'round_start',
+        roundNumber: gameState.round_number
+      })
+      setShowRoundTransition(true)
+      setLastRoundNumber(gameState.round_number)
+    }
+
+    // Check for game over
+    if (gameState.is_game_over && gameState.winner_id) {
+      const winner = gameState.players.find(p => p.id === gameState.winner_id)
+      setRoundTransitionData({
+        type: 'game_over',
+        winnerName: winner?.username || 'Unknown'
+      })
+      setShowRoundTransition(true)
+    }
+
+    setLastActivePlayers(currentActivePlayers)
+  }, [gameState?.round_number, gameState?.players, gameState?.is_game_over, gameState?.winner_id])
+
+  // Initialize tracking on first load
+  useEffect(() => {
+    if (gameState && lastActivePlayers.length === 0) {
+      const activePlayers = gameState.players
+        .filter(p => p.is_active)
+        .map(p => p.id)
+      setLastActivePlayers(activePlayers)
+      setLastRoundNumber(gameState.round_number)
+    }
+  }, [gameState])
 
   if (!gameState || !gameEngine) {
     return (
@@ -69,63 +183,73 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
 
   return (
     <View style={styles.container}>
+      {/* Compact Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Liar's Dice</Text>
-        <View style={styles.gameInfo}>
-          <Text style={styles.roundText}>Round {gameState.round_number}</Text>
-          <Text style={styles.phaseText}>
-            {gameState.phase === 'bidding' ? 'Bidding' : 
-             gameState.phase === 'challenging' ? 'Challenge' : 
-             gameState.phase === 'revealing' ? 'Revealing' : 'Round End'}
-          </Text>
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.title}>Liar's Dice</Text>
+          <Text style={styles.roundText}>Round {gameState.round_number} • {gameState.phase === 'bidding' ? 'Bidding' : gameState.phase === 'challenging' ? 'Challenge' : gameState.phase === 'revealing' ? 'Revealing' : 'Round End'}</Text>
         </View>
       </View>
 
-      <ScrollView style={styles.playersContainer}>
-        {gameState.players.map((player, index) => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            isCurrentPlayer={index === gameState.current_player_index}
-            isHumanPlayer={!player.is_ai}
+      {/* Main Content - Left/Right Split */}
+      <View style={styles.mainContent}>
+        {/* Left Side - Game State Info */}
+        <View style={styles.leftPanel}>
+          <View style={styles.currentBidSection}>
+            <Text style={styles.sectionTitle}>Current Bid</Text>
+            {gameState.current_bid ? (
+              <Text style={styles.currentBidText}>
+                {gameState.current_bid.quantity} × {gameState.current_bid.face_value}
+              </Text>
+            ) : (
+              <Text style={styles.noBidText}>No bid yet</Text>
+            )}
+          </View>
+
+          <TurnIndicator
+            currentPlayer={currentPlayer}
+            isHumanTurn={isHumanTurn}
+            gamePhase={gameState.phase}
           />
-        ))}
-      </ScrollView>
 
-      <View style={styles.centerArea}>
-        <View style={styles.bidArea}>
-          <Text style={styles.currentBidLabel}>Current Bid:</Text>
-          {gameState.current_bid ? (
-            <Text style={styles.currentBidText}>
-              {gameState.current_bid.quantity} x {gameState.current_bid.face_value}
-            </Text>
-          ) : (
-            <Text style={styles.noBidText}>No bid yet</Text>
+          {humanPlayer && (
+            <View style={styles.yourDiceSection}>
+              <Text style={styles.sectionTitle}>Your Dice</Text>
+              <DiceDisplay dice={humanPlayer.dice} />
+            </View>
           )}
+
+          <View style={styles.gameHistorySection}>
+            <Text style={styles.sectionTitle}>Game History</Text>
+            <GameHistory 
+              actions={gameEngine ? gameEngine.getActions() : []} 
+              players={Object.fromEntries(
+                gameState.players.map(p => [p.id, p.username])
+              )}
+            />
+          </View>
         </View>
 
-        {isHumanTurn && (
-          <View style={styles.turnIndicator}>
-            <Text style={styles.turnText}>Your Turn</Text>
-          </View>
-        )}
-
-        {currentPlayer && currentPlayer.is_ai && (
-          <View style={styles.aiIndicator}>
-            <Text style={styles.aiText}>
-              {currentPlayer.username} is thinking...
-            </Text>
-          </View>
-        )}
+        {/* Right Side - Players */}
+        <View style={styles.rightPanel}>
+          <Text style={styles.sectionTitle}>Players</Text>
+          <ScrollView style={styles.playersContainer}>
+            {gameState.players.map((player, index) => (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                isCurrentPlayer={index === gameState.current_player_index}
+                isHumanPlayer={!player.is_ai}
+              />
+            ))}
+          </ScrollView>
+        </View>
       </View>
 
-      {humanPlayer && (
-        <View style={styles.humanPlayerArea}>
-          <Text style={styles.yourDiceLabel}>Your Dice:</Text>
-          <DiceDisplay dice={humanPlayer.dice} />
-        </View>
-      )}
-
+      {/* Bottom Bidding Interface - Only show when it's human's turn */}
       {isHumanTurn && gameState.phase === 'bidding' && (
         <BiddingInterface
           currentBid={gameState.current_bid}
@@ -149,9 +273,34 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
         </View>
       )}
 
-      <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backButtonText}>Back to Menu</Text>
-      </TouchableOpacity>
+      {challengeResultData && (
+        <ChallengeResult
+          isVisible={showChallengeResult}
+          challengedBid={challengeResultData.challengedBid}
+          actualCount={challengeResultData.actualCount}
+          challengeSuccessful={challengeResultData.challengeSuccessful}
+          challengerName={challengeResultData.challengerName}
+          bidderName={challengeResultData.bidderName}
+          onHide={() => {
+            setShowChallengeResult(false)
+            setChallengeResultData(null)
+          }}
+        />
+      )}
+
+      {roundTransitionData && (
+        <RoundTransition
+          isVisible={showRoundTransition}
+          transitionType={roundTransitionData.type}
+          eliminatedPlayer={roundTransitionData.eliminatedPlayer}
+          roundNumber={roundTransitionData.roundNumber}
+          winnerName={roundTransitionData.winnerName}
+          onComplete={() => {
+            setShowRoundTransition(false)
+            setRoundTransitionData(null)
+          }}
+        />
+      )}
     </View>
   )
 }
@@ -159,106 +308,133 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: CasinoTheme.colors.charcoalDark,
     paddingTop: 50,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: CasinoTheme.colors.charcoalDark,
   },
   loadingText: {
-    color: '#fff',
+    color: CasinoTheme.colors.cream,
     fontSize: 18,
+    ...CasinoTheme.fonts.body,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    paddingHorizontal: CasinoTheme.spacing.lg,
+    paddingVertical: CasinoTheme.spacing.md,
+    borderBottomWidth: 3,
+    borderBottomColor: CasinoTheme.colors.gold,
+    backgroundColor: CasinoTheme.colors.charcoal,
+    ...CasinoTheme.shadows.small,
+  },
+  backButton: {
+    paddingVertical: CasinoTheme.spacing.xs,
+    paddingHorizontal: CasinoTheme.spacing.sm,
+    borderRadius: CasinoTheme.borderRadius.sm,
+    borderWidth: 2,
+    borderColor: CasinoTheme.colors.gold,
+    backgroundColor: CasinoTheme.colors.charcoalLight,
+  },
+  backButtonText: {
+    color: CasinoTheme.colors.gold,
+    fontSize: 16,
+    ...CasinoTheme.fonts.body,
+    fontWeight: 'bold',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
-  },
-  gameInfo: {
-    flexDirection: 'row',
-    gap: 20,
+    color: CasinoTheme.colors.gold,
+    marginBottom: 2,
+    ...CasinoTheme.fonts.header,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
   },
   roundText: {
-    color: '#ccc',
-    fontSize: 16,
+    color: CasinoTheme.colors.cream,
+    fontSize: 14,
+    ...CasinoTheme.fonts.body,
   },
-  phaseText: {
-    color: '#4CAF50',
-    fontSize: 16,
-    fontWeight: '600',
+  mainContent: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: CasinoTheme.colors.casinoGreen, // Felt table background
+  },
+  leftPanel: {
+    flex: 1,
+    padding: CasinoTheme.spacing.md,
+    borderRightWidth: 3,
+    borderRightColor: CasinoTheme.colors.gold,
+    backgroundColor: CasinoTheme.colors.casinoGreenDark,
+  },
+  rightPanel: {
+    flex: 1,
+    padding: CasinoTheme.spacing.md,
+    backgroundColor: CasinoTheme.colors.casinoGreen,
+  },
+  sectionTitle: {
+    color: CasinoTheme.colors.gold,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: CasinoTheme.spacing.sm,
+    ...CasinoTheme.fonts.header,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
+  },
+  currentBidSection: {
+    marginBottom: CasinoTheme.spacing.lg,
+    padding: CasinoTheme.spacing.md,
+    backgroundColor: CasinoTheme.colors.charcoal,
+    borderRadius: CasinoTheme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: CasinoTheme.colors.gold,
+    ...CasinoTheme.shadows.medium,
+  },
+  yourDiceSection: {
+    marginBottom: CasinoTheme.spacing.lg,
+    padding: CasinoTheme.spacing.md,
+    backgroundColor: CasinoTheme.colors.charcoal,
+    borderRadius: CasinoTheme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: CasinoTheme.colors.gold,
+    ...CasinoTheme.shadows.medium,
+  },
+  gameHistorySection: {
+    flex: 1,
+    padding: CasinoTheme.spacing.md,
+    backgroundColor: CasinoTheme.colors.charcoal,
+    borderRadius: CasinoTheme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: CasinoTheme.colors.gold,
+    ...CasinoTheme.shadows.medium,
   },
   playersContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-  },
-  centerArea: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  bidArea: {
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  currentBidLabel: {
-    color: '#ccc',
-    fontSize: 14,
-    marginBottom: 5,
   },
   currentBidText: {
-    color: '#fff',
+    color: CasinoTheme.colors.gold,
     fontSize: 24,
     fontWeight: 'bold',
+    ...CasinoTheme.fonts.numbers,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
   noBidText: {
-    color: '#666',
+    color: CasinoTheme.colors.grayLight,
     fontSize: 18,
-  },
-  turnIndicator: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  turnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  aiIndicator: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  aiText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  humanPlayerArea: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  yourDiceLabel: {
-    color: '#ccc',
-    fontSize: 16,
-    marginBottom: 10,
-    textAlign: 'center',
+    ...CasinoTheme.fonts.body,
+    fontStyle: 'italic',
   },
   gameOverContainer: {
     position: 'absolute',
@@ -266,42 +442,41 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   gameOverText: {
-    color: '#fff',
-    fontSize: 32,
+    color: CasinoTheme.colors.gold,
+    fontSize: 36,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: CasinoTheme.spacing.lg,
+    ...CasinoTheme.fonts.header,
+    textShadowColor: CasinoTheme.colors.charcoalDark,
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
   },
   winnerText: {
-    color: '#4CAF50',
-    fontSize: 24,
+    color: CasinoTheme.colors.cream,
+    fontSize: 28,
     fontWeight: '600',
-    marginBottom: 40,
+    marginBottom: CasinoTheme.spacing.xxl,
+    ...CasinoTheme.fonts.body,
+    textAlign: 'center',
   },
   newGameButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
+    backgroundColor: CasinoTheme.colors.gold,
+    paddingVertical: CasinoTheme.spacing.md,
+    paddingHorizontal: CasinoTheme.spacing.xl,
+    borderRadius: CasinoTheme.borderRadius.md,
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.goldDark,
+    ...CasinoTheme.shadows.large,
   },
   newGameButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-  },
-  backButtonText: {
-    color: '#999',
-    fontSize: 16,
+    color: CasinoTheme.colors.charcoalDark,
+    fontSize: 20,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.header,
   },
 })
