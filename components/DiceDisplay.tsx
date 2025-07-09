@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
+import { CasinoTheme } from '../lib/theme'
 
 interface DiceDisplayProps {
   dice: number[]
@@ -34,29 +35,29 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: CasinoTheme.spacing.sm,
     flexWrap: 'wrap',
   },
   die: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    width: 56,
+    height: 56,
+    backgroundColor: CasinoTheme.colors.cream,
+    borderRadius: CasinoTheme.borderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.charcoalDark,
+    ...CasinoTheme.shadows.medium,
   },
   dieSymbol: {
-    fontSize: 24,
-    color: '#333',
+    fontSize: 28,
+    color: CasinoTheme.colors.charcoalDark,
   },
   dieValue: {
-    fontSize: 10,
-    color: '#666',
-    marginTop: -5,
+    fontSize: 12,
+    color: CasinoTheme.colors.charcoal,
+    marginTop: -2,
+    fontWeight: 'bold',
+    ...CasinoTheme.fonts.numbers,
   },
 })

@@ -36,20 +36,33 @@ export class GameEngine {
     })
     this.gameState.current_bid = null
     this.gameState.phase = 'bidding'
-    this.gameState.current_player_index = this.findNextActivePlayer(this.gameState.current_player_index)
+    // Note: current_player_index should be set by the caller before calling this method
   }
 
   // Validate if a bid is legal
   isValidBid(bid: Bid, currentBid: Bid | null): boolean {
+    // 1s are wild and cannot be bid on
+    if (bid.face_value < 2 || bid.face_value > GAME_RULES.DICE_FACES) {
+      return false
+    }
+
+    if (bid.quantity <= 0) {
+      return false
+    }
+
     if (!currentBid) {
-      return bid.quantity > 0 && bid.face_value >= 1 && bid.face_value <= GAME_RULES.DICE_FACES
+      return true
     }
 
     // Must either increase quantity or face value (or both)
     if (bid.quantity > currentBid.quantity) {
-      return bid.face_value >= 1 && bid.face_value <= GAME_RULES.DICE_FACES
+      return true
     } else if (bid.quantity === currentBid.quantity) {
-      return bid.face_value > currentBid.face_value && bid.face_value <= GAME_RULES.DICE_FACES
+      // Cannot bid same quantity and higher face value if current is already 6
+      if (currentBid.face_value === 6) {
+        return false
+      }
+      return bid.face_value > currentBid.face_value
     }
 
     return false
@@ -93,6 +106,11 @@ export class GameEngine {
 
     const challengeSuccessful = totalDice < currentBid.quantity
     const loserId = challengeSuccessful ? currentBid.player_id : challengerId
+    const loserIndex = this.gameState.players.findIndex(p => p.id === loserId)
+
+    if (loserIndex === -1) {
+      return { success: false, challengeSuccessful: false, loserId: '' }
+    }
 
     this.gameState.phase = 'revealing'
 
@@ -108,10 +126,19 @@ export class GameEngine {
     })
 
     // Remove a die from the loser
+    const willBeEliminated = this.gameState.players[loserIndex].dice_count === 1
     this.removeDieFromPlayer(loserId)
 
     // Start a new round if the game isn't over
     if (!this.gameState.is_game_over) {
+      // Set the next player based on challenge outcome
+      if (willBeEliminated) {
+        // If player was eliminated, next player should be the one after their position
+        this.gameState.current_player_index = this.findNextActivePlayer(loserIndex - 1)
+      } else {
+        // If no elimination, loser of the challenge goes first
+        this.gameState.current_player_index = loserIndex
+      }
       this.startNewRound()
     }
 

@@ -69,8 +69,8 @@ function gameReducer(state: GameProviderState, action: GameStateAction): GamePro
     case 'UPDATE_GAME_STATE':
       return { 
         ...state, 
-        gameState: action.payload,
-        gameEngine: state.gameEngine ? new GameEngine(action.payload) : null
+        gameState: action.payload
+        // Keep the same gameEngine instance to preserve actions history
       }
     case 'RESET_GAME':
       return initialState
@@ -93,7 +93,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     try {
       // Create AI players (playerCount - 1, since human is 1 player)
       const aiPlayers: Player[] = []
-      const numAI = Math.min(Math.max(playerCount - 1, 1), 5) // 1-5 AI players
+      const numAI = playerCount - 1 // Total players minus the human player
       
       for (let i = 1; i <= numAI; i++) {
         aiPlayers.push({
@@ -126,8 +126,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         id: `match_${Date.now()}`,
         match_type: 'single_player',
         status: 'in_progress',
-        max_players: 4,
-        current_players: 4,
+        max_players: playerCount,
+        current_players: playerCount,
         game_settings: {
           starting_dice: 5,
           time_limit_seconds: 30,
@@ -194,11 +194,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const isEndGame = activePlayers.length === 2 && activePlayers.every(p => p.dice_count === 1)
 
     try {
+      // Detect single player mode (only one human player)
+      const humanPlayers = state.gameState.players.filter(p => !p.is_ai)
+      const isSinglePlayer = humanPlayers.length === 1
+      
       const aiMove = await aiEngine.makeDelayedMove(
         currentPlayer,
         state.gameState.players,
         state.gameState.current_bid,
-        isEndGame
+        isEndGame,
+        isSinglePlayer
       )
 
       console.log(`AI ${currentPlayer.username} decision:`, aiMove)

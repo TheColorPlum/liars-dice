@@ -52,28 +52,56 @@ export class AIEngine {
 
   // Generate move for normal game scenario
   private generateNormalGameMove(player: Player, players: Player[], currentBid: Bid | null): AIMove {
+    const totalDice = this.getTotalDiceCount(players)
+    const ownDice = player.dice
+    const onesCount = ownDice.filter(d => d === 1).length
+    
+    // Count our matching dice for each value (including ones as wild)
+    const getOwnDiceCounts = () => {
+      const counts: { [key: number]: number } = {}
+      for (let i = 2; i <= 6; i++) {
+        const actualCount = ownDice.filter(d => d === i).length
+        counts[i] = actualCount + onesCount
+      }
+      return counts
+    }
+
+    const ownDiceCounts = getOwnDiceCounts()
+
     if (!currentBid) {
-      // Make opening bid
+      // Find our strongest value for opening bid
+      const bestValue = Object.entries(ownDiceCounts)
+        .reduce((best, [value, count]) => count > best.count ? { value: Number(value), count } : best,
+          { value: 2, count: -1 })
+
+      // Conservative opening bid
+      const otherDice = totalDice - ownDice.length
+      const expectedOthers = Math.floor(otherDice * 0.33)
+      
       return {
         shouldChallenge: false,
-        bid: this.generateOpeningBid(player, players)
+        bid: {
+          quantity: Math.max(1, bestValue.count + expectedOthers),
+          face_value: bestValue.value,
+          player_id: player.id
+        }
       }
     }
 
     // Calculate confidence in current bid
-    const confidence = this.calculateBidConfidence(currentBid, player.dice, this.getTotalDiceCount(players), player.dice_count)
-
-    // Decide whether to challenge
-    if (confidence < this.difficulty.challengeThreshold) {
+    const confidence = this.calculateBidConfidence(currentBid, ownDice, totalDice, ownDice.length)
+    
+    // More aggressive challenging - use working implementation thresholds
+    if (confidence < -0.35) {
       return { shouldChallenge: true }
     }
 
     // Try to find a good bid to make
     const nextBid = this.findBestBid(player, players, currentBid)
     if (nextBid) {
-      const bidConfidence = this.calculateBidConfidence(nextBid, player.dice, this.getTotalDiceCount(players), player.dice_count)
+      const bidConfidence = this.calculateBidConfidence(nextBid, ownDice, totalDice, ownDice.length)
       
-      if (bidConfidence >= this.difficulty.bidAcceptanceThreshold) {
+      if (bidConfidence >= -0.15) {
         return {
           shouldChallenge: false,
           bid: nextBid
@@ -85,16 +113,30 @@ export class AIEngine {
     return { shouldChallenge: true }
   }
 
-  // Calculate confidence in a bid (-1 to 1, higher is more confident)
+  // Calculate confidence in a bid (based on working implementation)
   private calculateBidConfidence(bid: Bid, ownDice: number[], totalDice: number, ownDiceCount: number): number {
-    const probability = this.calculateBidProbability(bid, ownDice, totalDice)
-    const adjustedProbability = probability * this.difficulty.probabilityMultiplier
-
-    // Convert probability to confidence score
-    // 0.5 probability = 0 confidence
-    // 1.0 probability = 1 confidence
-    // 0.0 probability = -1 confidence
-    return (adjustedProbability - 0.5) * 2
+    const ownMatches = this.countMatches(ownDice, bid.face_value)
+    const otherDice = totalDice - ownDiceCount
+    const neededFromOthers = bid.quantity - ownMatches
+    
+    if (neededFromOthers <= 0) {
+      return 1.0 // We already have enough dice
+    }
+    
+    if (neededFromOthers > otherDice) {
+      return -1.0 // Impossible to achieve
+    }
+    
+    // Base confidence on:
+    // 1. What percentage of needed dice we have
+    // 2. How reasonable it is to expect the remaining from others
+    const ownSupportRatio = ownMatches / bid.quantity
+    const neededRatio = neededFromOthers / otherDice
+    
+    // More confident if:
+    // - We have a higher percentage of needed dice
+    // - We need a lower percentage from others
+    return ownSupportRatio - (neededRatio * 0.6)
   }
 
   // Calculate probability that a bid is true
@@ -162,27 +204,53 @@ export class AIEngine {
   // Find the best bid to make
   private findBestBid(player: Player, players: Player[], currentBid: Bid): Bid | null {
     const totalDice = this.getTotalDiceCount(players)
+    const ownDice = player.dice
+    const onesCount = ownDice.filter(d => d === 1).length
     const possibleBids: Bid[] = []
 
-    // Generate all possible bids
-    for (let quantity = 1; quantity <= totalDice; quantity++) {
-      for (let faceValue = 1; faceValue <= GAME_RULES.DICE_FACES; faceValue++) {
-        const bid: Bid = { quantity, face_value: faceValue, player_id: player.id }
+    // Count our dice for each value
+    const ownDiceCounts: { [key: number]: number } = {}
+    for (let i = 2; i <= 6; i++) {
+      const actualCount = ownDice.filter(d => d === i).length
+      ownDiceCounts[i] = actualCount + onesCount
+    }
+
+    // Generate possible bids based on our dice
+    Object.entries(ownDiceCounts).forEach(([valueStr, count]) => {
+      const value = Number(valueStr)
+      if (count === 0) return
+
+      const minQuantity = currentBid ? 
+        (currentBid.quantity === undefined || currentBid.face_value > value ? currentBid.quantity + 1 : currentBid.quantity) : 1
+      const maxQuantity = Math.min(totalDice, count + Math.ceil((totalDice - ownDice.length) * 0.5))
+
+      for (let qty = minQuantity; qty <= maxQuantity; qty++) {
+        const bid: Bid = { quantity: qty, face_value: value, player_id: player.id }
         
         if (this.isValidBid(bid, currentBid)) {
-          possibleBids.push(bid)
+          const confidence = this.calculateBidConfidence(bid, ownDice, totalDice, ownDice.length)
+          if (confidence >= -0.15) {
+            possibleBids.push(bid)
+          }
         }
       }
+    })
+
+    if (possibleBids.length === 0) {
+      return null
     }
 
     // Find bid with highest confidence
-    let bestBid: Bid | null = null
-    let bestConfidence = -Infinity
+    let bestBid = possibleBids[0]
+    let bestScore = this.calculateBidConfidence(bestBid, ownDice, totalDice, ownDice.length)
 
     for (const bid of possibleBids) {
-      const confidence = this.calculateBidConfidence(bid, player.dice, totalDice, player.dice_count)
-      if (confidence > bestConfidence) {
-        bestConfidence = confidence
+      const confidence = this.calculateBidConfidence(bid, ownDice, totalDice, ownDice.length)
+      const valueBonus = bid.face_value / 20 // Small bonus for higher values
+      const score = confidence + valueBonus
+      
+      if (score > bestScore) {
+        bestScore = score
         bestBid = bid
       }
     }
@@ -192,11 +260,24 @@ export class AIEngine {
 
   // Check if bid is valid (higher than current bid)
   private isValidBid(bid: Bid, currentBid: Bid | null): boolean {
+    // 1s are wild and cannot be bid on
+    if (bid.face_value < 2 || bid.face_value > 6) {
+      return false
+    }
+
+    if (bid.quantity <= 0) {
+      return false
+    }
+
     if (!currentBid) return true
 
     if (bid.quantity > currentBid.quantity) {
       return true
     } else if (bid.quantity === currentBid.quantity) {
+      // Cannot bid same quantity and higher face value if current is already 6
+      if (currentBid.face_value === 6) {
+        return false
+      }
       return bid.face_value > currentBid.face_value
     }
 
@@ -218,10 +299,13 @@ export class AIEngine {
     player: Player,
     players: Player[],
     currentBid: Bid | null,
-    isEndGame: boolean
+    isEndGame: boolean,
+    isSinglePlayer: boolean = false
   ): Promise<AIMove> {
-    // Random delay between 1-3 seconds for natural feel
-    const delay = Math.random() * 2000 + 1000
+    // Faster pacing for single player mode, normal for multiplayer
+    const delay = isSinglePlayer ? 
+      Math.random() * 500 + 500 :  // 0.5-1s for single player
+      Math.random() * 2000 + 1000   // 1-3s for multiplayer
     
     return new Promise(resolve => {
       setTimeout(() => {
