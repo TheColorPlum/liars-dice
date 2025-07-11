@@ -701,7 +701,7 @@ git tag -a v0.5.0 -m "Leaderboard functionality"
 git tag -a v0.6.1 -m "Core casino theme system and layout"
 git tag -a v0.6.2 -m "Component casino styling implementation"
 git tag -a v0.6.3 -m "Pixel art asset integration complete"
-git tag -a v0.6.4 -m "UI polish and animations complete"
+git tag -a v0.6.4 -m "Game table redesign with center bid focus"
 git tag -a v0.7.0 -m "Advanced features and social systems"
 git tag -a v1.0.0 -m "MVP ready for production"
 
@@ -738,11 +738,11 @@ SUPABASE_SERVICE_ROLE_KEY=production-service-role-key
 3. **Phase 3**: Private match system (v0.3.0)
 4. **Phase 4**: Matchmaking implementation (v0.4.0)
 5. **Phase 5**: Leaderboard and statistics (v0.5.0)
-6. **Phase 0.6**: Casino Visual Redesign (v0.6.x) - **CURRENT FOCUS**
-   - v0.6.1: Core theme system and layout restructuring
-   - v0.6.2: Component-by-component casino styling implementation
-   - v0.6.3: Pixel art asset integration and sprite management
-   - v0.6.4: UI polish, animations, and responsive design refinement
+6. **Phase 0.6**: Casino Visual Redesign (v0.6.x) - **✅ COMPLETED**
+   - ✅ v0.6.1: Core theme system and layout restructuring
+   - ✅ v0.6.2: Component-by-component casino styling implementation  
+   - ✅ v0.6.3: Pixel art asset integration and sprite management
+   - ✅ v0.6.4: Game table redesign with center bid focus and simplified bidding interface
 7. **Phase 7**: Advanced features and social systems (v0.7.0)
 8. **Phase 8**: MVP production ready (v1.0.0)
 

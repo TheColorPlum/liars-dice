@@ -5,28 +5,39 @@ This document serves as a running memory for development decisions, strategies, 
 ## Project Overview
 - **Tech Stack**: Expo (React Native), TypeScript, Supabase
 - **Target**: Cross-platform mobile game (iOS/Android)
-- **Current Status**: v0.6.x - Casino visual redesign in progress
-- **Current Focus**: Phase 0.6 systematic casino theme implementation
+- **Current Status**: v0.6.4 - Casino visual redesign complete
+- **Latest Achievement**: Game table redesign with center bid focus and simplified bidding interface
 - **Next Phase**: v0.7.0 - Advanced features and social systems
 
 ## Development History
 
-### v0.6.x - Casino Visual Redesign (July 2025) - **CURRENT FOCUS**
+### v0.6.x - Casino Visual Redesign (July 2025) - **✅ COMPLETED**
 - ✅ Fixed AI player count issue (was hardcoded to 4)
 - ✅ Fixed game history display and ordering  
 - ✅ Replaced quantity selection with intuitive stepper
 - ✅ Added left/right split layout for better space utilization
-- 🔄 **Phase 0.6.1**: Core casino theme system and layout restructuring
-- 🔄 **Phase 0.6.2**: Component-by-component casino styling implementation
-- 📋 **Phase 0.6.3**: Pixel art asset integration and sprite management
-- 📋 **Phase 0.6.4**: UI polish, animations, and responsive design refinement
-- **Status**: In progress with systematic phase-based approach
+- ✅ **Phase 0.6.1**: Core casino theme system and layout restructuring
+- ✅ **Phase 0.6.2**: Component-by-component casino styling implementation
+- ✅ **Phase 0.6.3**: Pixel art asset integration and sprite management
+- ✅ **Phase 0.6.4**: Game table redesign with center bid focus and simplified bidding interface
+- **Status**: Complete and ready for next phase
 
-### Key Technical Fixes
+### v0.6.4 - Game Table Redesign & UX Optimization (July 2025)
+- ✅ **Removed confusing aggressiveness indicator** - eliminated unnecessary UI clutter
+- ✅ **Scaled up player elements** - increased PlayerCard (160px→200px) and DiceDisplay (48px→60px) for better prominence
+- ✅ **Center bid as focal point** - moved current bid to center of table with large, prominent display (24px font)
+- ✅ **Simplified bidding interface** - replaced complex QuantityStepper with clean PixelButtonCSS +/- controls
+- ✅ **Applied menu button success patterns** - consistent auto-sizing, generous padding, proper visual hierarchy
+- ✅ **Improved layout density** - reduced excessive spacing while maintaining component substance
+- ✅ **Turn indicator repositioning** - made smaller (70% scale) and less prominent to highlight bid
+- **Result**: Cohesive, focused game table that feels like unified playing surface vs scattered UI elements
+
+### Key Technical Fixes (Historical)
 1. **AI Player Count**: Fixed hardcoded `max_players: 4` in GameContext to use actual `playerCount`
 2. **Game History**: Fixed GameEngine recreation issue causing empty history
 3. **Quantity Selection**: Replaced button grid with smart bounds calculation
 4. **Layout**: Changed from vertical stack to left/right split for better UX
+5. **Button Text Centering**: Created PixelButtonCSS component solving cross-platform text positioning issues
 
 ## Current Asset Strategy
 
