@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { View, Text, TextInput, StyleSheet, Alert } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
 import { OfflineNotice } from './OfflineNotice'
+import { PixelButtonCSS } from './PixelButtonCSS'
 
 export const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -89,26 +90,23 @@ export const AuthScreen: React.FC = () => {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          style={[styles.authButton, loading && styles.disabledButton]}
+        <PixelButtonCSS
+          text={loading ? 'LOADING...' : isLogin ? 'SIGN IN' : 'SIGN UP'}
           onPress={handleAuth}
+          color="gold"
+          size="auto"
+          style={styles.authButton}
           disabled={loading}
-        >
-          <Text style={styles.authButtonText}>
-            {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
-          </Text>
-        </TouchableOpacity>
+        />
 
-        <TouchableOpacity
-          style={styles.switchButton}
+        <PixelButtonCSS
+          text={isLogin ? "DON'T HAVE AN ACCOUNT? SIGN UP" : "ALREADY HAVE AN ACCOUNT? SIGN IN"}
           onPress={() => setIsLogin(!isLogin)}
-        >
-          <Text style={styles.switchButtonText}>
-            {isLogin 
-              ? "Don't have an account? Sign Up" 
-              : "Already have an account? Sign In"}
-          </Text>
-        </TouchableOpacity>
+          color="silver"
+          size="auto"
+          style={styles.switchButton}
+          textStyle={styles.smallText}
+        />
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
@@ -116,13 +114,14 @@ export const AuthScreen: React.FC = () => {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity
-          style={[styles.guestButton, loading && styles.disabledButton]}
+        <PixelButtonCSS
+          text="CONTINUE AS GUEST"
           onPress={handleGuestMode}
+          color="blue"
+          size="auto"
+          style={styles.guestButton}
           disabled={loading}
-        >
-          <Text style={styles.guestButtonText}>Continue as Guest</Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   )
@@ -131,61 +130,59 @@ export const AuthScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a5a1a', // Casino felt green
     justifyContent: 'center',
-    padding: 20,
+    padding: 32,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 50,
+    marginBottom: 48,
   },
   title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    fontSize: 28,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    color: '#d4af37', // Gold
+    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 20,
-    color: '#ccc',
+    fontSize: 14,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    color: '#f5f5dc', // Cream
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   formContainer: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 360,
     alignSelf: 'center',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#333',
+    backgroundColor: '#2a4a2a', // Darker felt green
+    color: '#f5f5dc', // Cream text
+    padding: 16,
+    borderRadius: 6,
+    marginBottom: 16,
+    fontSize: 14,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    borderWidth: 2,
+    borderTopColor: '#1a3a1a', // Darker shadow
+    borderLeftColor: '#1a3a1a',
+    borderRightColor: '#3a6a3a', // Lighter highlight  
+    borderBottomColor: '#3a6a3a',
   },
   authButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  authButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    marginBottom: 16,
+    width: '100%',
   },
   switchButton: {
-    alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
+    width: '100%',
   },
-  switchButtonText: {
-    color: '#4CAF50',
-    fontSize: 16,
+  smallText: {
+    fontSize: 9, // Smaller for long text
+    letterSpacing: 0.3,
   },
   divider: {
     flexDirection: 'row',
@@ -194,25 +191,17 @@ const styles = StyleSheet.create({
   },
   dividerLine: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#333',
+    height: 2,
+    backgroundColor: '#3a6a3a',
   },
   dividerText: {
-    color: '#666',
-    paddingHorizontal: 20,
-    fontSize: 16,
+    color: '#f5f5dc', // Cream
+    paddingHorizontal: 16,
+    fontSize: 12,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    letterSpacing: 1,
   },
   guestButton: {
-    backgroundColor: '#333',
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#555',
-  },
-  guestButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
+    width: '100%',
   },
 })

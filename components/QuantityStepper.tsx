@@ -1,6 +1,7 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import { CasinoTheme } from '../lib/theme'
+import { PixelButton } from './PixelButton'
 
 interface QuantityStepperProps {
   value: number
@@ -49,21 +50,13 @@ export const QuantityStepper: React.FC<QuantityStepperProps> = ({
       <Text style={styles.label}>{label}</Text>
       
       <View style={styles.stepperContainer}>
-        <TouchableOpacity
-          style={[
-            styles.stepperButton,
-            !canDecrease && styles.disabledButton
-          ]}
+        <PixelButton
+          text="−"
           onPress={handleDecrease}
           disabled={!canDecrease}
-        >
-          <Text style={[
-            styles.stepperButtonText,
-            !canDecrease && styles.disabledButtonText
-          ]}>
-            −
-          </Text>
-        </TouchableOpacity>
+          color="silver"
+          size="small"
+        />
 
         <View style={styles.valueContainer}>
           <Text style={styles.valueText}>{value}</Text>
@@ -75,21 +68,13 @@ export const QuantityStepper: React.FC<QuantityStepperProps> = ({
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.stepperButton,
-            !canIncrease && styles.disabledButton
-          ]}
+        <PixelButton
+          text="+"
           onPress={handleIncrease}
           disabled={!canIncrease}
-        >
-          <Text style={[
-            styles.stepperButtonText,
-            !canIncrease && styles.disabledButtonText
-          ]}>
-            +
-          </Text>
-        </TouchableOpacity>
+          color="silver"
+          size="small"
+        />
       </View>
     </View>
   )
@@ -106,43 +91,16 @@ const styles = StyleSheet.create({
     marginBottom: CasinoTheme.spacing.sm,
     textAlign: 'center',
     ...CasinoTheme.fonts.header,
-    textShadowColor: CasinoTheme.colors.charcoalDark,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
   },
   stepperContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: CasinoTheme.spacing.md,
-  },
-  stepperButton: {
-    backgroundColor: CasinoTheme.colors.gold,
-    width: 44,
-    height: 44,
-    borderRadius: CasinoTheme.borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: CasinoTheme.colors.goldDark,
-    ...CasinoTheme.shadows.medium,
-  },
-  disabledButton: {
-    backgroundColor: CasinoTheme.colors.gray,
-    borderColor: CasinoTheme.colors.grayDark,
-  },
-  stepperButtonText: {
-    color: CasinoTheme.colors.charcoalDark,
-    fontSize: 22,
-    fontWeight: 'bold',
-    ...CasinoTheme.fonts.numbers,
-  },
-  disabledButtonText: {
-    color: CasinoTheme.colors.grayLight,
   },
   valueContainer: {
     alignItems: 'center',
     minWidth: 90,
+    marginHorizontal: CasinoTheme.spacing.md,
   },
   valueText: {
     color: CasinoTheme.colors.gold,
@@ -150,9 +108,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 2,
     ...CasinoTheme.fonts.numbers,
-    textShadowColor: CasinoTheme.colors.charcoalDark,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
   },
   contextText: {
     color: CasinoTheme.colors.creamDark,

@@ -232,6 +232,114 @@ git push origin main --tags
 - Smooth 60fps animations
 - Offline mode support for single-player
 
+### 4.4 Visual Asset Strategy
+- **Art Style**: 2D pixel art for authentic retro casino aesthetic
+- **Asset Sources**: Budget-friendly off-the-shelf assets from itch.io ($8-18 total)
+- **Implementation**: Custom integration with existing theme system
+- **Details**: See CLAUDE.md for complete asset strategy and implementation phases
+
+### 4.5 Casino Visual Design Implementation (Phase 0.6 - Current Focus)
+
+This section outlines the systematic approach to implementing the casino-themed visual redesign across all game components.
+
+#### 4.5.1 Phase 0.6.1: Core Theme System & Layout (v0.6.1)
+**Objectives:**
+- Establish comprehensive casino color palette and typography system
+- Implement responsive layout system optimized for mobile casino aesthetic
+- Create reusable style utilities and component base classes
+
+**Key Deliverables:**
+- Updated `lib/theme.ts` with complete casino color system
+- Mobile-first responsive layout components
+- Typography system with casino-appropriate fonts
+- Base styling utilities for consistent spacing and sizing
+
+**Components Affected:**
+- GameBoard layout restructuring (left/right split design)
+- PlayerCard positioning and spacing optimization
+- BiddingInterface layout improvements for mobile interaction
+
+#### 4.5.2 Phase 0.6.2: Component Styling Implementation (v0.6.2)
+**Objectives:**
+- Apply casino theme consistently across all UI components
+- Implement intuitive mobile-first interaction patterns
+- Enhance visual hierarchy and information density
+
+**Key Deliverables:**
+- PlayerCard casino-styled redesign with improved information layout
+- BiddingInterface with enhanced mobile usability
+- GameHistory component with clear action tracking
+- TurnIndicator with prominent visual states
+- QuantityStepper with intuitive increment/decrement controls
+
+**Design Principles:**
+- Clear visual hierarchy with casino color palette
+- Touch-friendly button sizes (minimum 44px tap targets)
+- High contrast text for accessibility
+- Consistent card-based design language
+
+#### 4.5.3 Phase 0.6.3: Pixel Art Asset Integration (v0.6.3)
+**Objectives:**
+- Replace placeholder UI elements with acquired pixel art assets
+- Implement sprite management system for efficient asset loading
+- Create animation framework for dice and UI transitions
+
+**Key Deliverables:**
+- AssetManager utility class for sprite loading and caching
+- DiceDisplay component updated to use `dice_X_Y.png` sprites
+- PixelButton component utilizing button state sprites (normal/hover/clicked)
+- PixelPanel component for consistent background styling
+- Border and decoration integration across components
+
+**Technical Requirements:**
+- Efficient sprite atlasing and loading
+- Proper asset scaling for different screen densities
+- Fallback handling for asset loading failures
+- Performance optimization for asset-heavy components
+
+#### 4.5.4 Phase 0.6.4: Polish & Animation (v0.6.4)
+**Objectives:**
+- Add smooth animations and transitions throughout the UI
+- Implement responsive design refinements
+- Add visual feedback and "game juice" effects
+
+**Key Deliverables:**
+- Dice rolling animations with realistic physics
+- Smooth transitions between game states
+- Button press animations and haptic feedback
+- Screen shake and particle effects for dramatic moments
+- Loading states and skeleton screens
+
+**Animation Guidelines:**
+- Subtle, purposeful animations that enhance UX
+- Consistent timing and easing curves
+- Performance-optimized animations using React Native Animated API
+- Respect user accessibility preferences (reduced motion)
+
+#### 4.5.5 Design System Specifications
+
+**Color Palette (Casino Theme):**
+```typescript
+// Primary casino colors
+primary: '#C41E3A',     // Casino red
+secondary: '#1B5E20',   // Felt green  
+accent: '#FFD700',      // Gold highlights
+background: '#0D1B2A',  // Deep navy
+surface: '#1A2332',     // Card surface
+```
+
+**Typography System:**
+- Headers: Bold, high-contrast for game state information
+- Body: Medium weight for general game information  
+- Monospace: For numerical values (dice counts, bids)
+- Icon fonts: For consistent symbol rendering
+
+**Component Hierarchy:**
+1. **Game Board**: Primary container with felt background texture
+2. **Player Cards**: Elevated surfaces with clear player information
+3. **Action Panels**: Interactive areas with prominent call-to-action styling
+4. **Status Indicators**: High-visibility elements for game state communication
+
 ## 5. Data Model
 
 ### 5.1 Core Tables
@@ -590,6 +698,11 @@ git tag -a v0.2.0 -m "Single player mode complete"
 git tag -a v0.3.0 -m "Private matches implemented"
 git tag -a v0.4.0 -m "Matchmaking system ready"
 git tag -a v0.5.0 -m "Leaderboard functionality"
+git tag -a v0.6.1 -m "Core casino theme system and layout"
+git tag -a v0.6.2 -m "Component casino styling implementation"
+git tag -a v0.6.3 -m "Pixel art asset integration complete"
+git tag -a v0.6.4 -m "UI polish and animations complete"
+git tag -a v0.7.0 -m "Advanced features and social systems"
 git tag -a v1.0.0 -m "MVP ready for production"
 
 # Push with tags to create GitHub releases
@@ -625,7 +738,13 @@ SUPABASE_SERVICE_ROLE_KEY=production-service-role-key
 3. **Phase 3**: Private match system (v0.3.0)
 4. **Phase 4**: Matchmaking implementation (v0.4.0)
 5. **Phase 5**: Leaderboard and statistics (v0.5.0)
-6. **Phase 6**: MVP production ready (v1.0.0)
+6. **Phase 0.6**: Casino Visual Redesign (v0.6.x) - **CURRENT FOCUS**
+   - v0.6.1: Core theme system and layout restructuring
+   - v0.6.2: Component-by-component casino styling implementation
+   - v0.6.3: Pixel art asset integration and sprite management
+   - v0.6.4: UI polish, animations, and responsive design refinement
+7. **Phase 7**: Advanced features and social systems (v0.7.0)
+8. **Phase 8**: MVP production ready (v1.0.0)
 
 ## 14. Risk Assessment
 

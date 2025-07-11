@@ -1,30 +1,35 @@
 import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Image, StyleSheet } from 'react-native'
 import { CasinoTheme } from '../lib/theme'
+import { assetManager } from '../lib/AssetManager'
 
 interface DiceDisplayProps {
   dice: number[]
+  color?: number // Dice color (1=black/white, 2-6=color variants)
+  showHidden?: boolean // Use mystery dice for hidden values
 }
 
-const getDiceSymbol = (value: number): string => {
-  switch (value) {
-    case 1: return '⚀'
-    case 2: return '⚁'
-    case 3: return '⚂'
-    case 4: return '⚃'
-    case 5: return '⚄'
-    case 6: return '⚅'
-    default: return '⚀'
+export const DiceDisplay: React.FC<DiceDisplayProps> = ({ 
+  dice, 
+  color = 1, 
+  showHidden = false 
+}) => {
+  const getDiceImage = (value: number) => {
+    if (showHidden) {
+      return assetManager.getDiceSprite(color, 7) // Mystery dice
+    }
+    return assetManager.getDiceSprite(color, value)
   }
-}
 
-export const DiceDisplay: React.FC<DiceDisplayProps> = ({ dice }) => {
   return (
     <View style={styles.container}>
       {dice.map((value, index) => (
-        <View key={index} style={styles.die}>
-          <Text style={styles.dieSymbol}>{getDiceSymbol(value)}</Text>
-          <Text style={styles.dieValue}>{value}</Text>
+        <View key={index} style={styles.dieContainer}>
+          <Image 
+            source={getDiceImage(value)}
+            style={styles.dieImage}
+            resizeMode="contain"
+          />
         </View>
       ))}
     </View>
@@ -35,29 +40,28 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: CasinoTheme.spacing.sm,
     flexWrap: 'wrap',
+    marginTop: 8,
+    paddingHorizontal: 8,
   },
-  die: {
-    width: 56,
-    height: 56,
-    backgroundColor: CasinoTheme.colors.cream,
-    borderRadius: CasinoTheme.borderRadius.sm,
+  dieContainer: {
+    width: 60,
+    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
+    margin: 6,
+    backgroundColor: '#d4af37', // Gold background matching player card
     borderWidth: 3,
-    borderColor: CasinoTheme.colors.charcoalDark,
-    ...CasinoTheme.shadows.medium,
+    borderTopColor: '#FFEC8B', // Gold highlight
+    borderLeftColor: '#FFEC8B',
+    borderRightColor: '#CC9900', // Gold shadow
+    borderBottomColor: '#CC9900',
+    borderRadius: 8,
   },
-  dieSymbol: {
-    fontSize: 28,
-    color: CasinoTheme.colors.charcoalDark,
-  },
-  dieValue: {
-    fontSize: 12,
-    color: CasinoTheme.colors.charcoal,
-    marginTop: -2,
-    fontWeight: 'bold',
-    ...CasinoTheme.fonts.numbers,
+  dieImage: {
+    width: 44,
+    height: 44,
+    // Ensure pixel-perfect rendering
+    borderRadius: 0,
   },
 })

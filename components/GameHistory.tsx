@@ -143,7 +143,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderWidth: 1,
     borderColor: CasinoTheme.colors.goldDark,
-    ...CasinoTheme.shadows.small,
   },
   actionHeader: {
     flexDirection: 'row',

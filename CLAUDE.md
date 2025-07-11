@@ -1,0 +1,172 @@
+# Claude Development Memory & Notes
+
+This document serves as a running memory for development decisions, strategies, and notes for the Liar's Dice project.
+
+## Project Overview
+- **Tech Stack**: Expo (React Native), TypeScript, Supabase
+- **Target**: Cross-platform mobile game (iOS/Android)
+- **Current Status**: v0.6.x - Casino visual redesign in progress
+- **Current Focus**: Phase 0.6 systematic casino theme implementation
+- **Next Phase**: v0.7.0 - Advanced features and social systems
+
+## Development History
+
+### v0.6.x - Casino Visual Redesign (July 2025) - **CURRENT FOCUS**
+- ✅ Fixed AI player count issue (was hardcoded to 4)
+- ✅ Fixed game history display and ordering  
+- ✅ Replaced quantity selection with intuitive stepper
+- ✅ Added left/right split layout for better space utilization
+- 🔄 **Phase 0.6.1**: Core casino theme system and layout restructuring
+- 🔄 **Phase 0.6.2**: Component-by-component casino styling implementation
+- 📋 **Phase 0.6.3**: Pixel art asset integration and sprite management
+- 📋 **Phase 0.6.4**: UI polish, animations, and responsive design refinement
+- **Status**: In progress with systematic phase-based approach
+
+### Key Technical Fixes
+1. **AI Player Count**: Fixed hardcoded `max_players: 4` in GameContext to use actual `playerCount`
+2. **Game History**: Fixed GameEngine recreation issue causing empty history
+3. **Quantity Selection**: Replaced button grid with smart bounds calculation
+4. **Layout**: Changed from vertical stack to left/right split for better UX
+
+## Current Asset Strategy
+
+### Budget-Friendly 2D Pixel Art Plan
+
+#### Asset Sources & Budget ($8-18 total)
+- **Dice Asset Pack**: $3-5 (from itch.io, similar to "Squares Dungeons and Dice")
+- **UI/Card Framework**: $2-5 (card backgrounds, borders, panels)
+- **Table Texture**: $1-3 (pixel casino table)
+- **Icon Set**: $2-5 (basic UI icons)
+
+#### Implementation Phases
+1. **Phase 1: Asset Integration** (1-2 days)
+   - Purchase and download pixel art assets
+   - Create asset management system in `/assets/` folder
+   - Build sprite loading utilities
+   - Replace current dice with pixel art versions
+
+2. **Phase 2: UI Component Upgrade** (2-3 days)
+   - Redesign PlayerCard using purchased card backgrounds
+   - Update BiddingInterface with pixel art panels
+   - Create pixel art buttons and interactive elements
+   - Implement consistent pixel art spacing/grid
+
+3. **Phase 3: Polish & Animation** (1-2 days)
+   - Add dice rolling animations
+   - Create smooth transitions between game states
+   - Add pixel art particle effects
+   - Implement screen shake and juice effects
+
+#### Actual Asset Structure (Updated July 2025)
+```
+assets/ui/
+├── dice/
+│   ├── dice_1_1.png through dice_1_6.png (black/white dice)
+│   ├── dice_1_7.png (blank/mystery dice)
+│   └── dice_X_Y.png (color variants where X=color, Y=value)
+├── borders/
+│   └── [pixel art border elements]
+├── buttons/
+│   ├── [color-folders]/
+│   │   ├── normal.png
+│   │   ├── hover.png
+│   │   └── clicked.png
+└── backgrounds/
+    ├── black-and-white/
+    │   └── [pixel backgrounds]
+    └── color/
+        └── [colored pixel backgrounds]
+```
+
+**Asset Naming Convention:**
+- **Dice**: `dice_[color]_[value].png` (e.g., dice_1_4.png = black/white dice showing 4)
+- **Buttons**: Organized by color folders with normal/hover/clicked states
+- **Backgrounds**: Separated into black-and-white and color variants
+- **All assets**: PNG format for transparency support
+
+#### Visual Cohesion Rules
+- All elements snap to 16px grid
+- Use same color palette across all assets
+- Maintain consistent pixel density
+- Apply uniform scaling (2x, 3x for high-DPI)
+- Recolor purchased assets to match casino theme
+
+#### Code Changes Required
+- Create `AssetManager` utility class
+- Update `DiceDisplay` component to use sprites
+- Modify `CasinoTheme` to include pixel art spacing
+- Add animation utilities for sprite sequences
+
+## Git Workflow
+Following PRD strategy:
+- Feature branches for development
+- Pull requests for review
+- Tagged releases for milestones
+- Current: v0.6.x (casino redesign phases)
+- Next: v0.7.0 (advanced features)
+
+## Architecture Notes
+
+### Current Theme System
+- Comprehensive casino color palette in `lib/theme.ts`
+- Consistent spacing and typography
+- Component-specific styling utilities
+- Already supports pixel art with monospace fonts
+
+### Game Engine
+- Single GameEngine instance maintained in GameContext
+- AI move processing with difficulty levels
+- Real-time game state synchronization
+- Action history tracking
+
+### UI Components
+- Modular React Native components
+- Responsive design for mobile
+- Casino-themed styling system
+- Already optimized for pixel art integration
+
+## Asset Integration Status
+
+### ✅ Assets Acquired (July 2025)
+1. **Dice Assets**: Complete set with dice_X_Y.png naming (color_value)
+2. **UI Borders**: Pixel art border elements
+3. **Button Assets**: Multiple colors with normal/hover/clicked states
+4. **Backgrounds**: Black/white and color variants for panels
+
+### 🔄 Current Implementation Steps (Phase 0.6)
+
+**Phase 0.6.1: Core Theme System** 
+1. ✅ Update theme.ts with comprehensive casino color palette
+2. 🔄 Implement responsive layout system for mobile
+3. 🔄 Create reusable style utilities and base components
+
+**Phase 0.6.2: Component Styling**
+4. 📋 Apply casino theme to PlayerCard component
+5. 📋 Redesign BiddingInterface with mobile-first approach
+6. 📋 Update GameHistory with clear visual hierarchy
+7. 📋 Enhance TurnIndicator and QuantityStepper components
+
+**Phase 0.6.3: Asset Integration**
+8. 📋 Create `AssetManager` utility class for loading sprites
+9. 📋 Update `DiceDisplay` component to use dice_X_Y.png assets
+10. 📋 Integrate button sprites into all TouchableOpacity components
+11. 📋 Apply background assets to PlayerCard, BiddingInterface, GameHistory
+
+**Phase 0.6.4: Polish & Animation**
+12. 📋 Add dice rolling animations and smooth transitions
+13. 📋 Implement border elements for visual polish
+14. 📋 Add responsive design refinements and game juice effects
+
+### 📝 Implementation Notes
+- **Mystery Dice**: dice_1_7.png available for hidden/unknown states
+- **Button States**: Ready for interactive feedback (normal→hover→clicked)
+- **Backgrounds**: Can be used as "panels" for any UI container
+- **Scalability**: All PNG assets ready for 2x/3x scaling on high-DPI displays
+
+### 📝 Development and Problem Solving Notes
+1. Always give your honest assessment. Do not try to present a solution in a better light than your honest opinion in order to give the user a more pleasant experience.
+2. Never proceed with implementing a solution to a bug without first confirming the root cause of the issue and explaining WHY your solution will both fix the current bug and prevent future errors.
+3. Always opt for the simplest solution when implementing a new feature or bug fix to improve long term maintainability.
+4. Push changes to github and update the roadmap progress / PRD as checkpoints after each task is fully completed including testing / verifying desired behavior.
+5. Never independently claim that your code is fixed and working as expected without first
+6. Use agents for smaller tasks as if they were your personal team of engineers working across different aspects of the feature. 

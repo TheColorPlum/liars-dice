@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useGame } from '../contexts/GameContext'
+import { PixelButtonCSS } from './PixelButtonCSS'
 
 interface SinglePlayerSetupProps {
   onBack: () => void
@@ -21,13 +22,15 @@ export const SinglePlayerSetup: React.FC<SinglePlayerSetupProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Single Player</Text>
-        <Text style={styles.subtitle}>Game Setup</Text>
+        <Text style={styles.title}>SINGLE PLAYER</Text>
+        <Text style={styles.subtitle}>GAME SETUP</Text>
       </View>
 
+      {/* Player Count Selection */}
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Number of Players</Text>
+        <Text style={styles.sectionTitle}>NUMBER OF PLAYERS</Text>
         <View style={styles.playerCountContainer}>
           {[2, 3, 4, 5, 6].map((count) => (
             <TouchableOpacity
@@ -48,41 +51,46 @@ export const SinglePlayerSetup: React.FC<SinglePlayerSetupProps> = ({
           ))}
         </View>
         <Text style={styles.playerCountSubtext}>
-          You + {selectedPlayerCount - 1} AI opponent{selectedPlayerCount > 2 ? 's' : ''}
+          YOU + {selectedPlayerCount - 1} AI OPPONENT{selectedPlayerCount > 2 ? 'S' : ''}
         </Text>
       </View>
 
+      {/* AI Difficulty Selection */}
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>AI Difficulty</Text>
+        <Text style={styles.sectionTitle}>AI DIFFICULTY</Text>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.button, styles.easyButton]} 
+          <PixelButtonCSS
+            text="EASY"
             onPress={() => handleStartGame('easy')}
-          >
-            <Text style={styles.buttonText}>Easy</Text>
-            <Text style={styles.buttonSubtext}>Relaxed gameplay</Text>
-          </TouchableOpacity>
+            color="green"
+            size="auto"
+            style={styles.difficultyButton}
+            textStyle={styles.difficultyButtonText}
+          />
 
-          <TouchableOpacity 
-            style={[styles.button, styles.mediumButton]} 
+          <PixelButtonCSS
+            text="MEDIUM"
             onPress={() => handleStartGame('medium')}
-          >
-            <Text style={styles.buttonText}>Medium</Text>
-            <Text style={styles.buttonSubtext}>Balanced challenge</Text>
-          </TouchableOpacity>
+            color="gold"
+            size="auto"
+            style={styles.difficultyButton}
+            textStyle={styles.difficultyButtonText}
+          />
 
-          <TouchableOpacity 
-            style={[styles.button, styles.hardButton]} 
+          <PixelButtonCSS
+            text="HARD"
             onPress={() => handleStartGame('hard')}
-          >
-            <Text style={styles.buttonText}>Hard</Text>
-            <Text style={styles.buttonSubtext}>Intense competition</Text>
-          </TouchableOpacity>
+            color="red"
+            size="auto"
+            style={styles.difficultyButton}
+            textStyle={styles.difficultyButtonText}
+          />
         </View>
       </View>
 
+      {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backButtonText}>Back to Menu</Text>
+        <Text style={styles.backButtonText}>BACK TO MENU</Text>
       </TouchableOpacity>
     </View>
   )
@@ -91,108 +99,110 @@ export const SinglePlayerSetup: React.FC<SinglePlayerSetupProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a5a1a', // Casino felt green
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 32,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 48,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    fontSize: 22,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    color: '#d4af37', // Gold
+    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#ccc',
+    fontSize: 12,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    color: '#f5f5dc', // Cream
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   sectionContainer: {
     width: '100%',
-    maxWidth: 300,
-    marginBottom: 30,
+    maxWidth: 320,
+    marginBottom: 40,
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 15,
+    fontSize: 14,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    color: '#d4af37', // Gold
+    marginBottom: 20,
     textAlign: 'center',
+    letterSpacing: 1,
   },
   playerCountContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 10,
+    marginBottom: 16,
+    width: '100%',
   },
   playerCountButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#333',
+    width: 48,
+    height: 48,
+    borderRadius: 6, // Slightly squared for pixel art style
+    backgroundColor: '#2a4a2a', // Darker felt green
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#333',
+    borderTopColor: '#1a3a1a', // Darker shadow
+    borderLeftColor: '#1a3a1a',
+    borderRightColor: '#3a6a3a', // Lighter highlight
+    borderBottomColor: '#3a6a3a',
   },
   selectedPlayerCount: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: '#d4af37', // Gold when selected
+    borderTopColor: '#FFEC8B', // Gold highlight
+    borderLeftColor: '#FFEC8B',
+    borderRightColor: '#CC9900', // Gold shadow
+    borderBottomColor: '#CC9900',
   },
   playerCountText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: '#f5f5dc', // Cream
+    fontSize: 16,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    textAlign: 'center',
   },
   selectedPlayerCountText: {
-    color: '#fff',
+    color: '#2A2A2A', // Dark text on gold background
   },
   playerCountSubtext: {
-    color: '#ccc',
-    fontSize: 14,
+    color: '#f5f5dc', // Cream
+    fontSize: 10,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
     textAlign: 'center',
-    marginTop: 5,
+    marginTop: 8,
+    letterSpacing: 0.3,
   },
   buttonContainer: {
     width: '100%',
-  },
-  button: {
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 12,
-    marginBottom: 15,
     alignItems: 'center',
   },
-  easyButton: {
-    backgroundColor: '#4CAF50',
+  difficultyButton: {
+    marginBottom: 16,
+    width: '100%',
+    maxWidth: 280,
   },
-  mediumButton: {
-    backgroundColor: '#FF9800',
-  },
-  hardButton: {
-    backgroundColor: '#f44336',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  buttonSubtext: {
-    color: '#fff',
+  difficultyButtonText: {
     fontSize: 14,
-    opacity: 0.8,
+    letterSpacing: 1,
   },
   backButton: {
     position: 'absolute',
-    bottom: 40,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    bottom: 32,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   backButtonText: {
-    color: '#999',
-    fontSize: 16,
+    color: '#f5f5dc', // Cream
+    fontSize: 10,
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    letterSpacing: 0.5,
   },
 })

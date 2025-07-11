@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { StyleSheet, View, Alert } from 'react-native'
+import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GameProvider } from './contexts/GameContext'
 import { AuthScreen } from './components/AuthScreen'
@@ -13,8 +14,13 @@ type Screen = 'menu' | 'singlePlayerSetup' | 'game' | 'privateMatch' | 'joinMatc
 function AppContent() {
   const { user, loading } = useAuth()
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu')
+  
+  // Load pixel font
+  const [fontsLoaded] = useFonts({
+    PressStart2P_400Regular,
+  })
 
-  if (loading) {
+  if (loading || !fontsLoaded) {
     return <View style={styles.loadingContainer} />
   }
 

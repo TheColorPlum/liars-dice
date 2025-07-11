@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ImageBackground, Image } from 'react-native'
 import { useGame } from '../contexts/GameContext'
 import { Bid, Player } from '../types/game'
-import { CasinoTheme, getContainerStyle } from '../lib/theme'
+import { CasinoTheme, getContainerStyle, getPanelBackgroundStyle, getPanelContentStyle } from '../lib/theme'
 import { PlayerCard } from './PlayerCard'
 import { DiceDisplay } from './DiceDisplay'
 import { BiddingInterface } from './BiddingInterface'
@@ -10,6 +10,9 @@ import { GameHistory } from './GameHistory'
 import { ChallengeResult } from './ChallengeResult'
 import { TurnIndicator } from './TurnIndicator'
 import { RoundTransition } from './RoundTransition'
+import { PixelButtonCSS } from './PixelButtonCSS'
+// import { PixelPanel } from './PixelPanel'  // TEMPORARILY COMMENTED OUT
+import { assetManager } from '../lib/AssetManager'
 
 interface GameBoardProps {
   onBack: () => void
@@ -161,6 +164,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
   const isHumanTurn = currentPlayer && !currentPlayer.is_ai
   const humanPlayer = gameState.players.find(p => !p.is_ai)
 
+
   const handleBid = async (bid: Bid) => {
     if (!isHumanTurn) return
     
@@ -183,93 +187,106 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
 
   return (
     <View style={styles.container}>
-      {/* Compact Header */}
+      {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.title}>Liar's Dice</Text>
-          <Text style={styles.roundText}>Round {gameState.round_number} • {gameState.phase === 'bidding' ? 'Bidding' : gameState.phase === 'challenging' ? 'Challenge' : gameState.phase === 'revealing' ? 'Revealing' : 'Round End'}</Text>
-        </View>
+        <PixelButtonCSS
+          text="BACK"
+          onPress={onBack}
+          color="gold"
+          size="small"
+          style={styles.backButton}
+        />
       </View>
 
-      {/* Main Content - Left/Right Split */}
-      <View style={styles.mainContent}>
-        {/* Left Side - Game State Info */}
-        <View style={styles.leftPanel}>
-          <View style={styles.currentBidSection}>
-            <Text style={styles.sectionTitle}>Current Bid</Text>
-            {gameState.current_bid ? (
-              <Text style={styles.currentBidText}>
-                {gameState.current_bid.quantity} × {gameState.current_bid.face_value}
-              </Text>
-            ) : (
-              <Text style={styles.noBidText}>No bid yet</Text>
-            )}
-          </View>
-
-          <TurnIndicator
-            currentPlayer={currentPlayer}
-            isHumanTurn={isHumanTurn}
-            gamePhase={gameState.phase}
-          />
-
-          {humanPlayer && (
-            <View style={styles.yourDiceSection}>
-              <Text style={styles.sectionTitle}>Your Dice</Text>
-              <DiceDisplay dice={humanPlayer.dice} />
-            </View>
-          )}
-
-          <View style={styles.gameHistorySection}>
-            <Text style={styles.sectionTitle}>Game History</Text>
-            <GameHistory 
-              actions={gameEngine ? gameEngine.getActions() : []} 
-              players={Object.fromEntries(
-                gameState.players.map(p => [p.id, p.username])
-              )}
-            />
-          </View>
-        </View>
-
-        {/* Right Side - Players */}
-        <View style={styles.rightPanel}>
-          <Text style={styles.sectionTitle}>Players</Text>
-          <ScrollView style={styles.playersContainer}>
-            {gameState.players.map((player, index) => (
+      {/* Game Table Layout - Matching Mockup */}
+      <View style={styles.gameTable}>
+        
+        {/* Top Row - Opponent Cards */}
+        <View style={styles.opponentsRow}>
+          {gameState.players
+            .filter(player => player.is_ai)
+            .slice(0, 3) // Show max 3 opponents in top row
+            .map((player, index) => (
               <PlayerCard
                 key={player.id}
                 player={player}
                 isCurrentPlayer={index === gameState.current_player_index}
-                isHumanPlayer={!player.is_ai}
+                isHumanPlayer={false}
+                variant="opponent"
               />
             ))}
-          </ScrollView>
         </View>
-      </View>
 
-      {/* Bottom Bidding Interface - Only show when it's human's turn */}
-      {isHumanTurn && gameState.phase === 'bidding' && (
-        <BiddingInterface
-          currentBid={gameState.current_bid}
-          onBid={handleBid}
-          onChallenge={handleChallenge}
-          totalDice={gameEngine.getTotalDiceCount()}
-        />
-      )}
+        {/* Center Area - Current Bid Display */}
+        <View style={styles.centerArea}>
+          <View style={styles.centerBidDisplay}>
+            <Text style={styles.centerBidLabel}>CURRENT BID</Text>
+            <View style={styles.centerBidValueContainer}>
+              <Text style={styles.centerBidValue}>
+                {gameState.current_bid 
+                  ? `${gameState.current_bid.quantity} × ${gameState.current_bid.face_value}` 
+                  : 'NO BID'}
+              </Text>
+            </View>
+          </View>
+          
+          {/* Turn Indicator - Smaller, less prominent */}
+          <View style={styles.smallTurnIndicator}>
+            <TurnIndicator
+              currentPlayer={currentPlayer}
+              isHumanTurn={isHumanTurn}
+              gamePhase={gameState.phase}
+            />
+          </View>
+        </View>
+
+        {/* Bottom Row - Player and Bidding */}
+        <View style={styles.bottomRow}>
+          {/* Player Section */}
+          {humanPlayer && (
+            <View style={styles.playerSection}>
+              <PlayerCard
+                player={humanPlayer}
+                isCurrentPlayer={humanPlayer.id === currentPlayer?.id}
+                isHumanPlayer={true}
+                variant="self"
+              />
+              <DiceDisplay dice={humanPlayer.dice} />
+            </View>
+          )}
+
+          {/* Bidding Interface - Right Side */}
+          <View style={styles.biddingSection}>
+            {/* Bidding Controls - Only show when it's human's turn */}
+            {isHumanTurn && gameState.phase === 'bidding' && (
+              <BiddingInterface
+                currentBid={gameState.current_bid}
+                onBid={handleBid}
+                onChallenge={handleChallenge}
+                totalDice={gameEngine.getTotalDiceCount()}
+                variant="compact"
+              />
+            )}
+          </View>
+        </View>
+
+      </View>
 
       {gameState.is_game_over && (
         <View style={styles.gameOverContainer}>
-          <Text style={styles.gameOverText}>Game Over!</Text>
+          <Text style={styles.gameOverText}>GAME OVER!</Text>
           <Text style={styles.winnerText}>
             {gameState.winner_id === humanPlayer?.id 
-              ? 'You won!' 
-              : `${gameState.players.find(p => p.id === gameState.winner_id)?.username} won!`}
+              ? 'YOU WON!' 
+              : `${gameState.players.find(p => p.id === gameState.winner_id)?.username} WON!`}
           </Text>
-          <TouchableOpacity style={styles.newGameButton} onPress={handleNewGame}>
-            <Text style={styles.newGameButtonText}>New Game</Text>
-          </TouchableOpacity>
+          <PixelButtonCSS
+            text="NEW GAME"
+            onPress={handleNewGame}
+            color="green"
+            size="auto"
+            style={styles.newGameButton}
+          />
         </View>
       )}
 
@@ -308,134 +325,120 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: CasinoTheme.colors.charcoalDark,
-    paddingTop: 50,
+    backgroundColor: '#1a5a1a', // Casino felt green
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: CasinoTheme.colors.charcoalDark,
+    backgroundColor: '#1a5a1a',
   },
   loadingText: {
-    color: CasinoTheme.colors.cream,
-    fontSize: 18,
-    ...CasinoTheme.fonts.body,
+    color: '#f5f5dc', // Cream
+    fontSize: 16,
+    fontFamily: 'PressStart2P_400Regular',
   },
+  
+  // Header - Simple back button
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: CasinoTheme.spacing.lg,
-    paddingVertical: CasinoTheme.spacing.md,
-    borderBottomWidth: 3,
-    borderBottomColor: CasinoTheme.colors.gold,
-    backgroundColor: CasinoTheme.colors.charcoal,
-    ...CasinoTheme.shadows.small,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingTop: 50, // Account for status bar
   },
   backButton: {
-    paddingVertical: CasinoTheme.spacing.xs,
-    paddingHorizontal: CasinoTheme.spacing.sm,
-    borderRadius: CasinoTheme.borderRadius.sm,
-    borderWidth: 2,
-    borderColor: CasinoTheme.colors.gold,
-    backgroundColor: CasinoTheme.colors.charcoalLight,
+    alignSelf: 'flex-start',
   },
-  backButtonText: {
-    color: CasinoTheme.colors.gold,
-    fontSize: 16,
-    ...CasinoTheme.fonts.body,
-    fontWeight: 'bold',
-  },
-  headerCenter: {
+
+  // Game Table Layout - Matching Mockup
+  gameTable: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'flex-start',
+  },
+
+  // Top Row - Opponents (horizontal row)
+  opponentsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+
+  // Center Area - Current bid display and turn indicator
+  centerArea: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+
+  // Center Bid Display - Main focal point
+  centerBidDisplay: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  centerBidLabel: {
+    fontSize: 18,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#d4af37', // Gold
+    marginBottom: 16,
+    letterSpacing: 1,
+  },
+  centerBidValueContainer: {
+    backgroundColor: '#d4af37', // Gold background
+    borderWidth: 3,
+    borderTopColor: '#FFEC8B', // Gold highlight
+    borderLeftColor: '#FFEC8B',
+    borderRightColor: '#CC9900', // Gold shadow
+    borderBottomColor: '#CC9900',
+    borderRadius: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    minWidth: 160,
     alignItems: 'center',
   },
-  title: {
+  centerBidValue: {
     fontSize: 24,
-    color: CasinoTheme.colors.gold,
-    marginBottom: 2,
-    ...CasinoTheme.fonts.header,
-    textShadowColor: CasinoTheme.colors.charcoalDark,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#2A2A2A', // Dark text on gold
+    textAlign: 'center',
+    letterSpacing: 1,
   },
-  roundText: {
-    color: CasinoTheme.colors.cream,
-    fontSize: 14,
-    ...CasinoTheme.fonts.body,
+
+  // Small Turn Indicator
+  smallTurnIndicator: {
+    transform: [{ scale: 0.7 }],
+    opacity: 0.8,
   },
-  mainContent: {
-    flex: 1,
+
+  // Bottom Row - Player + Bidding side by side
+  bottomRow: {
     flexDirection: 'row',
-    backgroundColor: CasinoTheme.colors.casinoGreen, // Felt table background
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    marginBottom: 8,
   },
-  leftPanel: {
+
+  // Player Section (left side of bottom row)
+  playerSection: {
     flex: 1,
-    padding: CasinoTheme.spacing.md,
-    borderRightWidth: 3,
-    borderRightColor: CasinoTheme.colors.gold,
-    backgroundColor: CasinoTheme.colors.casinoGreenDark,
+    alignItems: 'center',
+    marginRight: 16,
   },
-  rightPanel: {
-    flex: 1,
-    padding: CasinoTheme.spacing.md,
-    backgroundColor: CasinoTheme.colors.casinoGreen,
+
+  // Bidding Section (right side of bottom row)
+  biddingSection: {
+    alignItems: 'center',
+    minWidth: 140,
+    paddingLeft: 8,
   },
-  sectionTitle: {
-    color: CasinoTheme.colors.gold,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: CasinoTheme.spacing.sm,
-    ...CasinoTheme.fonts.header,
-    textShadowColor: CasinoTheme.colors.charcoalDark,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
-  },
-  currentBidSection: {
-    marginBottom: CasinoTheme.spacing.lg,
-    padding: CasinoTheme.spacing.md,
-    backgroundColor: CasinoTheme.colors.charcoal,
-    borderRadius: CasinoTheme.borderRadius.md,
-    borderWidth: 2,
-    borderColor: CasinoTheme.colors.gold,
-    ...CasinoTheme.shadows.medium,
-  },
-  yourDiceSection: {
-    marginBottom: CasinoTheme.spacing.lg,
-    padding: CasinoTheme.spacing.md,
-    backgroundColor: CasinoTheme.colors.charcoal,
-    borderRadius: CasinoTheme.borderRadius.md,
-    borderWidth: 2,
-    borderColor: CasinoTheme.colors.gold,
-    ...CasinoTheme.shadows.medium,
-  },
-  gameHistorySection: {
-    flex: 1,
-    padding: CasinoTheme.spacing.md,
-    backgroundColor: CasinoTheme.colors.charcoal,
-    borderRadius: CasinoTheme.borderRadius.md,
-    borderWidth: 2,
-    borderColor: CasinoTheme.colors.gold,
-    ...CasinoTheme.shadows.medium,
-  },
-  playersContainer: {
-    flex: 1,
-  },
-  currentBidText: {
-    color: CasinoTheme.colors.gold,
-    fontSize: 24,
-    fontWeight: 'bold',
-    ...CasinoTheme.fonts.numbers,
-    textShadowColor: CasinoTheme.colors.charcoalDark,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
-  },
-  noBidText: {
-    color: CasinoTheme.colors.grayLight,
-    fontSize: 18,
-    ...CasinoTheme.fonts.body,
-    fontStyle: 'italic',
-  },
+
+
+
+  // Game Over Modal
   gameOverContainer: {
     position: 'absolute',
     top: 0,
@@ -447,36 +450,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gameOverText: {
-    color: CasinoTheme.colors.gold,
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: CasinoTheme.spacing.lg,
-    ...CasinoTheme.fonts.header,
-    textShadowColor: CasinoTheme.colors.charcoalDark,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
+    color: '#d4af37', // Gold
+    fontSize: 24,
+    fontFamily: 'PressStart2P_400Regular',
+    marginBottom: 24,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   winnerText: {
-    color: CasinoTheme.colors.cream,
-    fontSize: 28,
-    fontWeight: '600',
-    marginBottom: CasinoTheme.spacing.xxl,
-    ...CasinoTheme.fonts.body,
+    color: '#f5f5dc', // Cream
+    fontSize: 16,
+    fontFamily: 'PressStart2P_400Regular',
+    marginBottom: 32,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   newGameButton: {
-    backgroundColor: CasinoTheme.colors.gold,
-    paddingVertical: CasinoTheme.spacing.md,
-    paddingHorizontal: CasinoTheme.spacing.xl,
-    borderRadius: CasinoTheme.borderRadius.md,
-    borderWidth: 3,
-    borderColor: CasinoTheme.colors.goldDark,
-    ...CasinoTheme.shadows.large,
-  },
-  newGameButtonText: {
-    color: CasinoTheme.colors.charcoalDark,
-    fontSize: 20,
-    fontWeight: 'bold',
-    ...CasinoTheme.fonts.header,
+    // PixelButtonCSS will handle its own styling
   },
 })

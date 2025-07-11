@@ -2,14 +2,14 @@
 // Pixel art inspired color palette with casino aesthetics
 
 export const CasinoTheme = {
-  // Primary Colors - Casino Table
+  // Primary Colors - Pixel Art Compatible
   colors: {
     // Deep casino green - like felt tables
     casinoGreen: '#1B5E20',
     casinoGreenLight: '#2E7D32',
     casinoGreenDark: '#0D2818',
     
-    // Rich gold - for accents and highlights
+    // Rich gold - for accents and highlights (pixel art compatible)
     gold: '#FFD700',
     goldLight: '#FFECB3',
     goldDark: '#FF8F00',
@@ -19,12 +19,12 @@ export const CasinoTheme = {
     casinoRedLight: '#D32F2F',
     casinoRedDark: '#8B0000',
     
-    // Rich backgrounds
-    charcoal: '#212121',
+    // Rich backgrounds (adjusted for pixel art)
+    charcoal: '#2A2A2A',
     charcoalLight: '#424242',
-    charcoalDark: '#121212',
+    charcoalDark: '#1A1A1A',
     
-    // Text colors
+    // Text colors (optimized for pixel art backgrounds)
     cream: '#FFF8E1',
     creamDark: '#F5F5DC',
     white: '#FFFFFF',
@@ -79,29 +79,11 @@ export const CasinoTheme = {
     xl: 16,
   },
   
-  // Shadows for depth
+  // Shadows removed for React Native Web compatibility
   shadows: {
-    small: {
-      shadowColor: '#000000',
-      shadowOffset: { width: 2, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 0, // Sharp shadows for pixel art
-      elevation: 2,
-    },
-    medium: {
-      shadowColor: '#000000',
-      shadowOffset: { width: 4, height: 4 },
-      shadowOpacity: 0.4,
-      shadowRadius: 0,
-      elevation: 4,
-    },
-    large: {
-      shadowColor: '#000000',
-      shadowOffset: { width: 6, height: 6 },
-      shadowOpacity: 0.5,
-      shadowRadius: 0,
-      elevation: 6,
-    }
+    small: {},
+    medium: {},
+    large: {}
   },
   
   // Common component styles
@@ -150,6 +132,23 @@ export const CasinoTheme = {
       borderColor: '#212121',
       borderRadius: 4,
     }
+  }
+}
+
+// Utility function to get consistent panel background styling
+export const getPanelBackgroundStyle = (backgroundType: 'dark' | 'light' = 'dark') => {
+  return {
+    overflow: 'hidden' as const,
+    borderRadius: CasinoTheme.borderRadius.md,
+    borderWidth: 3,
+    borderColor: CasinoTheme.colors.gold,
+  }
+}
+
+// Utility function to get consistent panel content styling
+export const getPanelContentStyle = () => {
+  return {
+    padding: CasinoTheme.spacing.md,
   }
 };
 

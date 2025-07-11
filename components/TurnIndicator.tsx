@@ -163,50 +163,60 @@ const ThinkingDots: React.FC = () => {
 
 const styles = StyleSheet.create({
   turnIndicator: {
-    borderRadius: 20,
-    paddingHorizontal: 20,
+    borderRadius: 6, // More square for pixel art style
+    paddingHorizontal: 24,
     paddingVertical: 12,
     alignItems: 'center',
     marginVertical: 8,
     borderWidth: 2,
+    minWidth: 180,
   },
   humanTurnIndicator: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    borderColor: '#4CAF50',
+    backgroundColor: '#2a5a2a', // Darker green
+    borderTopColor: '#4a8a4a', // Lighter highlight
+    borderLeftColor: '#4a8a4a',
+    borderRightColor: '#1a4a1a', // Darker shadow
+    borderBottomColor: '#1a4a1a',
   },
   aiTurnIndicator: {
-    backgroundColor: 'rgba(255, 152, 0, 0.2)',
-    borderColor: '#FF9800',
+    backgroundColor: '#2a4a2a', // Dark felt green
+    borderTopColor: '#3a6a3a', // Lighter highlight
+    borderLeftColor: '#3a6a3a',
+    borderRightColor: '#1a3a1a', // Darker shadow
+    borderBottomColor: '#1a3a1a',
   },
   indicatorContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   turnIcon: {
-    fontSize: 20,
+    fontSize: 16,
+    marginRight: 12,
+    color: '#d4af37', // Gold
   },
   turnText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    letterSpacing: 1,
   },
   humanTurnText: {
-    color: '#4CAF50',
+    color: '#4CAF50', // Keep green for human
   },
   aiTurnText: {
-    color: '#FF9800',
+    color: '#f5f5dc', // Cream for AI
   },
   thinkingDots: {
-    marginTop: 8,
+    marginTop: 12,
   },
   dotsContainer: {
     flexDirection: 'row',
-    gap: 4,
+    justifyContent: 'center',
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FF9800',
+    marginHorizontal: 3,
+    backgroundColor: '#d4af37', // Gold dots
   },
 })

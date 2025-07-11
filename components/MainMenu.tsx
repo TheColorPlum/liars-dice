@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
 import { useGame } from '../contexts/GameContext'
+import { PixelButtonCSS } from './PixelButtonCSS'
 
 interface MainMenuProps {
   onStartSinglePlayer: () => void
@@ -30,34 +31,59 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Header - Centered title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Liar's Dice</Text>
-        <Text style={styles.subtitle}>
-          Welcome, {user?.user_metadata?.username || 'Guest'}!
-        </Text>
+        <Text style={styles.title}>MAIN MENU</Text>
       </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={onStartSinglePlayer}>
-          <Text style={styles.buttonText}>Single Player</Text>
-        </TouchableOpacity>
+      {/* Main Button Stack - Centered vertical layout matching mockup */}
+      <View style={styles.buttonStack}>
+        <PixelButtonCSS
+          text="SINGLE PLAYER"
+          onPress={onStartSinglePlayer}
+          color="gold"
+          size="auto"
+          style={styles.menuButton}
+        />
 
-        <TouchableOpacity style={styles.button} onPress={onStartPrivateMatch}>
-          <Text style={styles.buttonText}>Private Match</Text>
-        </TouchableOpacity>
+        <PixelButtonCSS
+          text="MULTIPLAYER"
+          onPress={onStartPrivateMatch}
+          color="gold"
+          size="auto"
+          style={styles.menuButton}
+        />
 
-        <TouchableOpacity style={styles.button} onPress={onJoinMatch}>
-          <Text style={styles.buttonText}>Join Match</Text>
-        </TouchableOpacity>
+        <PixelButtonCSS
+          text="JOIN GAME"
+          onPress={onJoinMatch}
+          color="gold"
+          size="auto"
+          style={styles.menuButton}
+        />
 
-        <TouchableOpacity style={styles.button} onPress={onShowLeaderboard}>
-          <Text style={styles.buttonText}>Leaderboard</Text>
-        </TouchableOpacity>
+        <PixelButtonCSS
+          text="GLOBAL LEADERBOARD"
+          onPress={onShowLeaderboard}
+          color="gold"
+          size="auto"
+          style={styles.menuButton}
+          textStyle={styles.smallerText}
+        />
+
+        <PixelButtonCSS
+          text="SETTINGS"
+          onPress={() => {}} // TODO: Add settings handler
+          color="gold"
+          size="auto"
+          style={styles.menuButton}
+        />
       </View>
 
+      {/* Footer - Logout positioned at bottom */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+          <Text style={styles.logoutText}>LOG OUT</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -65,54 +91,60 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 }
 
 const styles = StyleSheet.create({
+  // CASINO FELT BACKGROUND - Phase B styling applied
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a5a1a', // Deep casino felt green from mockup
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+    // Add subtle texture effect through gradient-like shadows
+    borderWidth: 0,
   },
+  
+  // Header section
   header: {
     alignItems: 'center',
-    marginBottom: 50,
+    marginBottom: 48, // Adjusted for better proportions
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    fontSize: 18, // Adjusted for pixel font readability
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
+    color: '#d4af37', // Gold color from mockup
+    textAlign: 'center',
+    letterSpacing: 1, // Slight spacing for pixel font clarity
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#ccc',
-  },
-  buttonContainer: {
+  
+  // Main button stack - matches mockup layout
+  buttonStack: {
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 260, // Slightly narrower for better proportions
+    alignItems: 'center', // Center buttons
   },
-  button: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    marginBottom: 15,
-    alignItems: 'center',
+  menuButton: {
+    // PixelButton spacing - matches mockup
+    marginBottom: 12, // Consistent but tighter spacing
+    width: '100%', // Full width within buttonStack
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  smallerText: {
+    fontSize: 10, // Even smaller for long text like "GLOBAL LEADERBOARD"
+    letterSpacing: 0.5, // Slight letter spacing for readability
   },
+  
+  // Footer section
   footer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 32,
+    alignItems: 'center',
   },
-  signOutButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  logoutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  signOutText: {
-    color: '#999',
-    fontSize: 16,
+  logoutText: {
+    color: '#ccc',
+    fontSize: 10, // Smaller for pixel font
+    fontFamily: 'PressStart2P_400Regular', // Pixel font
   },
 })
