@@ -19,7 +19,7 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
-  const { gameState, gameEngine, makeMove, processAIMove, resetGame } = useGame()
+  const { gameState, gameEngine, makeMove, processAIMove, resetGame, isEndgame } = useGame()
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
   const [showChallengeResult, setShowChallengeResult] = useState(false)
   const [challengeResultData, setChallengeResultData] = useState<{
@@ -220,12 +220,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
         {/* Center Area - Current Bid Display */}
         <View style={styles.centerArea}>
           <View style={styles.centerBidDisplay}>
-            <Text style={styles.centerBidLabel}>CURRENT BID</Text>
+            <Text style={styles.centerBidLabel}>{isEndgame === true ? 'FINAL SHOWDOWN' : 'CURRENT BID'}</Text>
             <View style={styles.centerBidValueContainer}>
               <Text style={styles.centerBidValue}>
                 {gameState.current_bid 
-                  ? `${gameState.current_bid.quantity} × ${gameState.current_bid.face_value}` 
-                  : 'NO BID'}
+                  ? (isEndgame === true 
+                      ? `Sum: ${gameState.current_bid.face_value}` 
+                      : `${gameState.current_bid.quantity} × ${gameState.current_bid.face_value}`)
+                  : (isEndgame === true ? 'BID TOTAL SUM' : 'NO BID')}
               </Text>
             </View>
           </View>
@@ -234,7 +236,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
           <View style={styles.smallTurnIndicator}>
             <TurnIndicator
               currentPlayer={currentPlayer}
-              isHumanTurn={isHumanTurn}
+              isHumanTurn={Boolean(isHumanTurn)}
               gamePhase={gameState.phase}
             />
           </View>
@@ -265,6 +267,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
                 onChallenge={handleChallenge}
                 totalDice={gameEngine.getTotalDiceCount()}
                 variant="compact"
+                isEndgame={isEndgame || false}
               />
             )}
           </View>

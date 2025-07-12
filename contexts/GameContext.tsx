@@ -10,7 +10,8 @@ interface GameContextType {
   match: Match | null
   loading: boolean
   error: string | null
-  startSinglePlayerGame: (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number) => void
+  isEndgame: boolean
+  startSinglePlayerGame: (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number, startingDice?: number) => void
   makeMove: (move: GameMove) => Promise<boolean>
   processAIMove: () => Promise<boolean>
   resetGame: () => void
@@ -87,7 +88,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(gameReducer, initialState)
 
   // Start a single player game
-  const startSinglePlayerGame = (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number = 4) => {
+  const startSinglePlayerGame = (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number = 4, startingDice: number = 5) => {
     dispatch({ type: 'SET_LOADING', payload: true })
 
     try {
@@ -100,7 +101,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           id: `ai_${i}`,
           username: `AI Player ${i}`,
           display_name: `AI Player ${i}`,
-          dice_count: 5,
+          dice_count: startingDice,
           dice: [],
           is_active: true,
           is_ai: true,
@@ -129,7 +130,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         max_players: playerCount,
         current_players: playerCount,
         game_settings: {
-          starting_dice: 5,
+          starting_dice: startingDice,
           time_limit_seconds: 30,
           ai_difficulty: aiDifficulty
         },
@@ -139,7 +140,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
 
       // Create game state
-      const gameState = GameEngine.createNewGame(allPlayers, match.id)
+      const gameState = GameEngine.createNewGame(allPlayers, match.id, startingDice)
       
       dispatch({ type: 'SET_MATCH', payload: match })
       dispatch({ type: 'SET_GAME_STATE', payload: gameState })
@@ -241,6 +242,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     match: state.match,
     loading: state.loading,
     error: state.error,
+    isEndgame: state.gameEngine?.isEndgame() || false,
     startSinglePlayerGame,
     makeMove,
     processAIMove,

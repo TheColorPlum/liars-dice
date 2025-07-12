@@ -39,8 +39,29 @@ export class GameEngine {
     // Note: current_player_index should be set by the caller before calling this method
   }
 
+  // Check if the game is in endgame scenario (2 players, 1 die each)
+  isEndgame(): boolean {
+    const activePlayers = this.getActivePlayers()
+    return activePlayers.length === 2 && activePlayers.every(p => p.dice_count === 1)
+  }
+
   // Validate if a bid is legal
   isValidBid(bid: Bid, currentBid: Bid | null): boolean {
+    if (this.isEndgame()) {
+      // In endgame, bid.face_value represents the sum of both dice (2-12)
+      if (bid.face_value < 2 || bid.face_value > 12) {
+        return false
+      }
+      
+      if (!currentBid) {
+        return true
+      }
+      
+      // In endgame, new bid must have higher sum value
+      return bid.face_value > currentBid.face_value
+    }
+    
+    // Normal game validation
     // 1s are wild and cannot be bid on
     if (bid.face_value < 2 || bid.face_value > GAME_RULES.DICE_FACES) {
       return false
@@ -102,9 +123,20 @@ export class GameEngine {
     }
 
     const currentBid = this.gameState.current_bid
-    const totalDice = this.countTotalDice(currentBid.face_value)
+    let challengeSuccessful: boolean
+    let actualCount: number
 
-    const challengeSuccessful = totalDice < currentBid.quantity
+    if (this.isEndgame()) {
+      // In endgame, calculate sum of both dice
+      actualCount = this.calculateEndgameDiceSum()
+      // Challenge succeeds if actual sum is LESS than the bid
+      challengeSuccessful = actualCount < currentBid.face_value
+    } else {
+      // Normal game - count matching dice
+      actualCount = this.countTotalDice(currentBid.face_value)
+      challengeSuccessful = actualCount < currentBid.quantity
+    }
+
     const loserId = challengeSuccessful ? currentBid.player_id : challengerId
     const loserIndex = this.gameState.players.findIndex(p => p.id === loserId)
 
@@ -119,8 +151,9 @@ export class GameEngine {
       player_id: challengerId,
       data: {
         bid: currentBid,
-        total_dice: totalDice,
-        successful: challengeSuccessful
+        total_dice: actualCount,
+        successful: challengeSuccessful,
+        is_endgame: this.isEndgame()
       },
       timestamp: new Date()
     })
@@ -158,6 +191,15 @@ export class GameEngine {
       }
     })
     return count
+  }
+
+  // Calculate the sum of all dice in endgame scenario
+  private calculateEndgameDiceSum(): number {
+    const activePlayers = this.getActivePlayers()
+    return activePlayers.reduce((sum, player) => {
+      const diceValue = player.dice[0] || 0
+      return sum + diceValue
+    }, 0)
   }
 
   // Remove a die from a player
@@ -277,13 +319,13 @@ export class GameEngine {
   }
 
   // Create a new game state
-  static createNewGame(players: Player[], matchId: string): GameState {
+  static createNewGame(players: Player[], matchId: string, customStartingDice?: number): GameState {
     const gameState: GameState = {
       id: `game_${Date.now()}`,
       match_id: matchId,
       players: players.map(p => ({
         ...p,
-        dice_count: GAME_RULES.STARTING_DICE,
+        dice_count: customStartingDice || GAME_RULES.STARTING_DICE,
         dice: [],
         is_active: true
       })),

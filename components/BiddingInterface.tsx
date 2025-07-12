@@ -10,6 +10,7 @@ interface BiddingInterfaceProps {
   onChallenge: () => void
   totalDice: number
   variant?: 'full' | 'compact'
+  isEndgame?: boolean
 }
 
 export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
@@ -17,10 +18,20 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
   onBid,
   onChallenge,
   totalDice,
-  variant = 'full'
+  variant = 'full',
+  isEndgame = false
 }) => {
   // Calculate smart initial values and bounds
   const getSmartBounds = () => {
+    if (isEndgame) {
+      // In endgame, we bid on sum of dice (2-12)
+      if (!currentBid) {
+        return { min: 2, max: 12, initial: 7 } // Conservative first bid
+      } else {
+        return { min: currentBid.face_value + 1, max: 12, initial: Math.min(12, currentBid.face_value + 1) }
+      }
+    }
+    
     if (!currentBid) {
       // First bid: reasonable range based on total dice
       const minQuantity = 1
@@ -36,14 +47,28 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
 
   const [selectedQuantity, setSelectedQuantity] = useState(1)
   const [selectedFaceValue, setSelectedFaceValue] = useState(2) // Start at 2 since 1s are wild
+  const [selectedSum, setSelectedSum] = useState(7) // For endgame sum bidding
 
-  // Update bounds and selected quantity when currentBid changes
+  // Update bounds and selected values when currentBid or endgame state changes
   useEffect(() => {
     const bounds = getSmartBounds()
-    setSelectedQuantity(bounds.initial)
-  }, [currentBid, totalDice])
+    if (isEndgame) {
+      setSelectedSum(bounds.initial)
+    } else {
+      setSelectedQuantity(bounds.initial)
+    }
+  }, [currentBid, totalDice, isEndgame])
 
-  const isValidBid = (quantity: number, faceValue: number): boolean => {
+  const isValidBid = (quantity: number, faceValue: number, sumValue?: number): boolean => {
+    if (isEndgame) {
+      // In endgame, validate sum value (2-12)
+      const sum = sumValue || selectedSum
+      if (sum < 2 || sum > 12) return false
+      if (!currentBid) return true
+      return sum > currentBid.face_value
+    }
+    
+    // Normal game validation
     // 1s are wild and cannot be bid on
     if (faceValue < 2 || faceValue > 6) {
       return false
@@ -69,12 +94,22 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
   }
 
   const handleMakeBid = () => {
-    if (isValidBid(selectedQuantity, selectedFaceValue)) {
-      onBid({
-        quantity: selectedQuantity,
-        face_value: selectedFaceValue,
-        player_id: 'human_player'
-      })
+    if (isEndgame) {
+      if (isValidBid(1, selectedSum, selectedSum)) {
+        onBid({
+          quantity: 1, // Quantity is ignored in endgame
+          face_value: selectedSum, // Sum value goes in face_value field
+          player_id: 'human_player'
+        })
+      }
+    } else {
+      if (isValidBid(selectedQuantity, selectedFaceValue)) {
+        onBid({
+          quantity: selectedQuantity,
+          face_value: selectedFaceValue,
+          player_id: 'human_player'
+        })
+      }
     }
   }
 
@@ -103,43 +138,72 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
     // Compact version for game table - simplified essential controls
     return (
       <View style={styles.compactContainer}>
-        <Text style={styles.compactLabel}>YOUR BID</Text>
+        <Text style={styles.compactLabel}>{isEndgame === true ? 'FINAL SHOWDOWN' : 'YOUR BID'}</Text>
         <Text style={styles.compactBidText}>
-          {selectedQuantity} × {selectedFaceValue}
+          {isEndgame === true ? `Sum: ${selectedSum}` : `${selectedQuantity} × ${selectedFaceValue}`}
         </Text>
         
         <View style={styles.compactControls}>
-          {/* Simple Quantity Controls */}
-          <View style={styles.quantitySection}>
-            <Text style={styles.sectionLabel}>QTY</Text>
-            <View style={styles.simpleQuantityControls}>
-              <PixelButtonCSS
-                text="−"
-                onPress={() => setSelectedQuantity(Math.max(getSmartBounds().min, selectedQuantity - 1))}
-                disabled={selectedQuantity <= getSmartBounds().min}
-                color="silver"
-                size="small"
-                style={styles.stepperButton}
-              />
-              <Text style={styles.quantityValue}>{selectedQuantity}</Text>
-              <PixelButtonCSS
-                text="+"
-                onPress={() => setSelectedQuantity(Math.min(getSmartBounds().max, selectedQuantity + 1))}
-                disabled={selectedQuantity >= getSmartBounds().max}
-                color="silver"
-                size="small"
-                style={styles.stepperButton}
-              />
+          {isEndgame === true ? (
+            /* Endgame Sum Controls */
+            <View style={styles.quantitySection}>
+              <Text style={styles.sectionLabel}>SUM</Text>
+              <View style={styles.simpleQuantityControls}>
+                <PixelButtonCSS
+                  text="−"
+                  onPress={() => setSelectedSum(Math.max(getSmartBounds().min, selectedSum - 1))}
+                  disabled={selectedSum <= getSmartBounds().min}
+                  color="silver"
+                  size="small"
+                  style={styles.stepperButton}
+                />
+                <Text style={styles.quantityValue}>{selectedSum}</Text>
+                <PixelButtonCSS
+                  text="+"
+                  onPress={() => setSelectedSum(Math.min(getSmartBounds().max, selectedSum + 1))}
+                  disabled={selectedSum >= getSmartBounds().max}
+                  color="silver"
+                  size="small"
+                  style={styles.stepperButton}
+                />
+              </View>
+              <Text style={styles.endgameHint}>Bid on total of both dice</Text>
             </View>
-          </View>
-          
-          {/* Face Value Selection */}
-          <View style={styles.faceSection}>
-            <Text style={styles.sectionLabel}>FACE</Text>
-            <View style={styles.compactFaceButtons}>
-              {renderFaceValueButtons()}
-            </View>
-          </View>
+          ) : (
+            <>
+              {/* Normal Game Controls */}
+              <View style={styles.quantitySection}>
+                <Text style={styles.sectionLabel}>QTY</Text>
+                <View style={styles.simpleQuantityControls}>
+                  <PixelButtonCSS
+                    text="−"
+                    onPress={() => setSelectedQuantity(Math.max(getSmartBounds().min, selectedQuantity - 1))}
+                    disabled={selectedQuantity <= getSmartBounds().min}
+                    color="silver"
+                    size="small"
+                    style={styles.stepperButton}
+                  />
+                  <Text style={styles.quantityValue}>{selectedQuantity}</Text>
+                  <PixelButtonCSS
+                    text="+"
+                    onPress={() => setSelectedQuantity(Math.min(getSmartBounds().max, selectedQuantity + 1))}
+                    disabled={selectedQuantity >= getSmartBounds().max}
+                    color="silver"
+                    size="small"
+                    style={styles.stepperButton}
+                  />
+                </View>
+              </View>
+              
+              {/* Face Value Selection */}
+              <View style={styles.faceSection}>
+                <Text style={styles.sectionLabel}>FACE</Text>
+                <View style={styles.compactFaceButtons}>
+                  {renderFaceValueButtons()}
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.compactActionButtons}>
@@ -147,7 +211,7 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
             text="BID"
             onPress={handleMakeBid}
             color="green"
-            disabled={!isValidBid(selectedQuantity, selectedFaceValue)}
+            disabled={isEndgame === true ? !isValidBid(1, selectedSum, selectedSum) : !isValidBid(selectedQuantity, selectedFaceValue)}
             size="small"
             style={styles.compactButton}
           />
@@ -172,9 +236,9 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
       {/* Current Bid and Selected Bid Row */}
       <View style={styles.topRow}>
         <View style={styles.bidInfo}>
-          <Text style={styles.selectedBidLabel}>Your Bid:</Text>
+          <Text style={styles.selectedBidLabel}>{isEndgame === true ? 'Final Showdown:' : 'Your Bid:'}</Text>
           <Text style={styles.selectedBidText}>
-            {selectedQuantity} × {selectedFaceValue}
+            {isEndgame === true ? `Sum: ${selectedSum}` : `${selectedQuantity} × ${selectedFaceValue}`}
           </Text>
         </View>
         <View style={styles.actionButtons}>
@@ -182,7 +246,7 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
             text="BID"
             onPress={handleMakeBid}
             color="green"
-            disabled={!isValidBid(selectedQuantity, selectedFaceValue)}
+            disabled={isEndgame === true ? !isValidBid(1, selectedSum, selectedSum) : !isValidBid(selectedQuantity, selectedFaceValue)}
             size="medium"
             style={styles.actionButton}
           />
@@ -201,22 +265,49 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
 
       {/* Selection Controls */}
       <View style={styles.selectionRow}>
-        <QuantityStepper
-          value={selectedQuantity}
-          onValueChange={setSelectedQuantity}
-          min={getSmartBounds().min}
-          max={getSmartBounds().max}
-          totalDice={totalDice}
-          label="Quantity"
-          style={styles.stepper}
-        />
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Face Value</Text>
-          <View style={styles.faceValueContainer}>
-            {renderFaceValueButtons()}
+        {isEndgame === true ? (
+          <View style={styles.endgameContainer}>
+            <Text style={styles.sectionTitle}>Dice Sum (2-12)</Text>
+            <View style={styles.endgameSumControls}>
+              <PixelButtonCSS
+                text="−"
+                onPress={() => setSelectedSum(Math.max(getSmartBounds().min, selectedSum - 1))}
+                disabled={selectedSum <= getSmartBounds().min}
+                color="silver"
+                size="medium"
+                style={styles.endgameStepperButton}
+              />
+              <Text style={styles.endgameSumValue}>{selectedSum}</Text>
+              <PixelButtonCSS
+                text="+"
+                onPress={() => setSelectedSum(Math.min(getSmartBounds().max, selectedSum + 1))}
+                disabled={selectedSum >= getSmartBounds().max}
+                color="silver"
+                size="medium"
+                style={styles.endgameStepperButton}
+              />
+            </View>
+            <Text style={styles.endgameHint}>Bid on the total sum of both dice</Text>
           </View>
-        </View>
+        ) : (
+          <>
+            <QuantityStepper
+              value={selectedQuantity}
+              onValueChange={setSelectedQuantity}
+              min={getSmartBounds().min}
+              max={getSmartBounds().max}
+              totalDice={totalDice}
+              label="Quantity"
+            />
+
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Face Value</Text>
+              <View style={styles.faceValueContainer}>
+                {renderFaceValueButtons()}
+              </View>
+            </View>
+          </>
+        )}
       </View>
     </View>
   )
@@ -364,5 +455,36 @@ const styles = StyleSheet.create({
   compactButton: {
     marginHorizontal: 6,
     minWidth: 80,
+  },
+
+  // Endgame styles
+  endgameHint: {
+    fontSize: 8,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#d4af37', // Gold
+    marginTop: 4,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  endgameContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  endgameSumControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginVertical: 12,
+  },
+  endgameStepperButton: {
+    minWidth: 48,
+    minHeight: 48,
+  },
+  endgameSumValue: {
+    fontSize: 24,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#f5f5dc', // Cream
+    minWidth: 48,
+    textAlign: 'center',
   },
 })

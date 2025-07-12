@@ -5,8 +5,8 @@ This document serves as a running memory for development decisions, strategies, 
 ## Project Overview
 - **Tech Stack**: Expo (React Native), TypeScript, Supabase
 - **Target**: Cross-platform mobile game (iOS/Android)
-- **Current Status**: v0.6.4 - Casino visual redesign complete
-- **Latest Achievement**: Game table redesign with center bid focus and simplified bidding interface
+- **Current Status**: v0.6.5 - Endgame functionality and testing features complete
+- **Latest Achievement**: Implemented missing 1v1 endgame sum-based bidding + dice count selection for testing
 - **Next Phase**: v0.7.0 - Advanced features and social systems
 
 ## Development History
@@ -31,6 +31,18 @@ This document serves as a running memory for development decisions, strategies, 
 - ✅ **Improved layout density** - reduced excessive spacing while maintaining component substance
 - ✅ **Turn indicator repositioning** - made smaller (70% scale) and less prominent to highlight bid
 - **Result**: Cohesive, focused game table that feels like unified playing surface vs scattered UI elements
+
+### v0.6.5 - Endgame Implementation & Testing Features (July 2025) - **✅ COMPLETED**
+- ✅ **Missing endgame functionality** - implemented 1v1 sum-based bidding for final showdown scenario
+- ✅ **Game engine updates** - added `isEndgame()` detection and sum-based bid validation (range 2-12)
+- ✅ **Challenge resolution** - updated to calculate dice sum instead of quantity matching in endgame
+- ✅ **AI endgame strategy** - ported conservative sum-based logic from old implementation
+- ✅ **UI endgame mode** - BiddingInterface shows "FINAL SHOWDOWN" with sum stepper instead of quantity/face
+- ✅ **Center bid display** - shows "Sum: X" format in endgame vs normal "X × Y" format
+- ✅ **Dice count selection** - added testing feature to SinglePlayerSetup for custom starting dice (1-5)
+- ✅ **Instant endgame testing** - 2 players + 1 die each = immediate endgame scenario for testing
+- ✅ **Visual indicators** - red highlighting and "⚡ INSTANT ENDGAME" text for quick testing setup
+- **Result**: Complete endgame implementation with powerful testing capabilities for sum-based bidding
 
 ### Key Technical Fixes (Historical)
 1. **AI Player Count**: Fixed hardcoded `max_players: 4` in GameContext to use actual `playerCount`

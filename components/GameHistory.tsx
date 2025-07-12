@@ -6,25 +6,39 @@ import { CasinoTheme } from '../lib/theme'
 interface GameHistoryProps {
   actions: GameAction[]
   players: { [id: string]: string } // Map of player IDs to names
+  isEndgame?: boolean
 }
 
-export const GameHistory: React.FC<GameHistoryProps> = ({ actions, players }) => {
+export const GameHistory: React.FC<GameHistoryProps> = ({ actions, players, isEndgame = false }) => {
   const formatAction = (action: GameAction): string => {
     const playerName = players[action.player_id] || 'Unknown'
     
     switch (action.type) {
       case 'bid':
         if (action.data && typeof action.data === 'object' && 'quantity' in action.data && 'face_value' in action.data) {
-          return `${playerName} bid ${action.data.quantity} × ${action.data.face_value}`
+          // Check if this action occurred in endgame by looking for endgame markers in the data
+          const actionData = action.data as { quantity: number, face_value: number, is_endgame?: boolean }
+          const wasEndgame = actionData.is_endgame || (isEndgame && actionData.quantity === 1)
+          
+          if (wasEndgame) {
+            return `${playerName} bid sum: ${actionData.face_value}`
+          } else {
+            return `${playerName} bid ${actionData.quantity} × ${actionData.face_value}`
+          }
         }
         return `${playerName} made a bid`
         
       case 'challenge':
         if (action.data && typeof action.data === 'object' && 'successful' in action.data) {
-          const challengeData = action.data as { successful: boolean, bid: any, total_dice: number }
+          const challengeData = action.data as { successful: boolean, bid: any, total_dice: number, is_endgame?: boolean }
           const outcome = challengeData.successful ? 'succeeded' : 'failed'
           const bid = challengeData.bid
-          return `${playerName} challenged ${bid.quantity} × ${bid.face_value} (${outcome} - actual: ${challengeData.total_dice})`
+          
+          if (challengeData.is_endgame) {
+            return `${playerName} challenged sum: ${bid.face_value} (${outcome} - actual sum: ${challengeData.total_dice})`
+          } else {
+            return `${playerName} challenged ${bid.quantity} × ${bid.face_value} (${outcome} - actual: ${challengeData.total_dice})`
+          }
         }
         return `${playerName} challenged the bid`
         

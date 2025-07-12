@@ -24,29 +24,46 @@ export class AIEngine {
 
   // Generate move for endgame scenario (1v1 with single dice)
   private generateEndGameMove(player: Player, currentBid: Bid | null): AIMove {
+    const ownDie = player.dice[0]
+
     if (!currentBid) {
-      // Make a conservative first bid
+      // Initial bid - bid own die value plus small buffer (conservative)
+      const initialSum = Math.min(12, ownDie + 2)
       return {
         shouldChallenge: false,
         bid: {
-          quantity: 1,
-          face_value: this.getHighestDie(player.dice),
+          quantity: 1, // Quantity is ignored in endgame
+          face_value: initialSum, // Sum value goes in face_value field
           player_id: player.id
         }
       }
     }
 
-    // In endgame, we know our die, so we can be more certain
-    const ownDie = player.dice[0]
-    const bidMatches = ownDie === currentBid.face_value || 
-                      (GAME_RULES.ONES_ARE_WILD && ownDie === 1 && currentBid.face_value !== 1)
-
-    if (currentBid.quantity === 1) {
-      // If bid is 1, challenge if we don't have it
-      return { shouldChallenge: !bidMatches }
+    // Challenge if bid exceeds maximum possible sum
+    const maxPossibleSum = ownDie + 6 // Our die + maximum opponent die (6)
+    if (currentBid.face_value > maxPossibleSum) {
+      return { shouldChallenge: true }
     }
 
-    // If bid is 2 or more, always challenge (impossible with 1 die each)
+    // Challenge if bid is getting too close to maximum (slightly aggressive)
+    if (currentBid.face_value >= maxPossibleSum - 2) {
+      return { shouldChallenge: true }
+    }
+
+    // Make conservative bid increase if reasonable
+    const nextSum = currentBid.face_value + 1
+    if (nextSum <= 12) {
+      return {
+        shouldChallenge: false,
+        bid: {
+          quantity: 1, // Quantity is ignored in endgame
+          face_value: nextSum,
+          player_id: player.id
+        }
+      }
+    }
+
+    // If we can't bid higher, challenge
     return { shouldChallenge: true }
   }
 

@@ -210,6 +210,31 @@ git push origin main --tags
 - Anti-cheat measures
 - Game replay storage
 
+### 3.7 Endgame System (v0.6.5)
+**User Stories:**
+- As a player, I can experience authentic 1v1 endgame scenarios with sum-based bidding
+- As a developer, I can easily test endgame functionality without playing full games
+- As a player, I understand the different rules when only 2 players with 1 die each remain
+
+**Functional Requirements:**
+- **Endgame Detection**: Automatic detection when 2 active players with 1 die each remain
+- **Sum-Based Bidding**: Players bid on total sum of both dice (range 2-12) instead of quantity/face
+- **Visual Mode Switch**: UI automatically switches to "FINAL SHOWDOWN" mode with appropriate controls
+- **AI Endgame Strategy**: Sophisticated AI logic for sum-based decision making
+- **Testing Infrastructure**: Configurable starting dice count (1-5) for rapid testing scenarios
+
+**Technical Requirements:**
+- Enhanced bid validation for sum-based logic in endgame scenarios
+- Updated challenge resolution to calculate dice sum vs bid comparison
+- Dynamic UI components that adapt to normal vs endgame states
+- AI endgame strategy ported from reference implementation
+- Comprehensive endgame state management across all components
+
+**Testing Features:**
+- **Instant Endgame**: 2 players + 1 die each = immediate endgame testing
+- **Progressive Testing**: Various dice counts (2-4) for different game length scenarios
+- **Visual Indicators**: Special highlighting for quick endgame setup (red buttons, "⚡ INSTANT ENDGAME" text)
+
 ## 4. User Interface Requirements
 
 ### 4.1 Core UI Components
@@ -743,6 +768,7 @@ SUPABASE_SERVICE_ROLE_KEY=production-service-role-key
    - ✅ v0.6.2: Component-by-component casino styling implementation  
    - ✅ v0.6.3: Pixel art asset integration and sprite management
    - ✅ v0.6.4: Game table redesign with center bid focus and simplified bidding interface
+   - ✅ v0.6.5: Endgame implementation and testing features
 7. **Phase 7**: Advanced features and social systems (v0.7.0)
 8. **Phase 8**: MVP production ready (v1.0.0)
 

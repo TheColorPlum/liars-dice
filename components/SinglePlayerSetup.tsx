@@ -14,9 +14,12 @@ export const SinglePlayerSetup: React.FC<SinglePlayerSetupProps> = ({
 }) => {
   const { startSinglePlayerGame } = useGame()
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(4)
+  const [selectedDiceCount, setSelectedDiceCount] = useState(5)
 
   const handleStartGame = (difficulty: 'easy' | 'medium' | 'hard') => {
-    startSinglePlayerGame(difficulty, selectedPlayerCount)
+    // Start game with custom player count and dice count
+    // Setting 2 players + 1 die each = instant endgame for testing
+    startSinglePlayerGame(difficulty, selectedPlayerCount, selectedDiceCount)
     onGameStarted()
   }
 
@@ -52,6 +55,37 @@ export const SinglePlayerSetup: React.FC<SinglePlayerSetupProps> = ({
         </View>
         <Text style={styles.playerCountSubtext}>
           YOU + {selectedPlayerCount - 1} AI OPPONENT{selectedPlayerCount > 2 ? 'S' : ''}
+        </Text>
+      </View>
+
+      {/* Dice Count Selection */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>STARTING DICE PER PLAYER</Text>
+        <View style={styles.diceCountContainer}>
+          {[1, 2, 3, 4, 5].map((count) => (
+            <TouchableOpacity
+              key={count}
+              style={[
+                styles.diceCountButton,
+                selectedDiceCount === count && styles.selectedDiceCount,
+                count === 1 && selectedPlayerCount === 2 && styles.endgameHighlight
+              ]}
+              onPress={() => setSelectedDiceCount(count)}
+            >
+              <Text style={[
+                styles.diceCountText,
+                selectedDiceCount === count && styles.selectedDiceCountText,
+                count === 1 && selectedPlayerCount === 2 && styles.endgameHighlightText
+              ]}>
+                {count}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.diceCountSubtext}>
+          {selectedPlayerCount === 2 && selectedDiceCount === 1 
+            ? '⚡ INSTANT ENDGAME - Perfect for testing!' 
+            : `Each player starts with ${selectedDiceCount} dice`}
         </Text>
       </View>
 
@@ -204,5 +238,63 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'PressStart2P_400Regular', // Pixel font
     letterSpacing: 0.5,
+  },
+
+  // Dice count selection styles (similar to player count)
+  diceCountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+    width: '100%',
+  },
+  diceCountButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: '#2a4a2a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderTopColor: '#1a3a1a',
+    borderLeftColor: '#1a3a1a',
+    borderRightColor: '#3a6a3a',
+    borderBottomColor: '#3a6a3a',
+  },
+  selectedDiceCount: {
+    backgroundColor: '#d4af37', // Gold when selected
+    borderTopColor: '#FFEC8B',
+    borderLeftColor: '#FFEC8B',
+    borderRightColor: '#CC9900',
+    borderBottomColor: '#CC9900',
+  },
+  diceCountText: {
+    color: '#f5f5dc', // Cream
+    fontSize: 16,
+    fontFamily: 'PressStart2P_400Regular',
+    textAlign: 'center',
+  },
+  selectedDiceCountText: {
+    color: '#2A2A2A', // Dark text on gold background
+  },
+  diceCountSubtext: {
+    color: '#f5f5dc', // Cream
+    fontSize: 10,
+    fontFamily: 'PressStart2P_400Regular',
+    textAlign: 'center',
+    marginTop: 8,
+    letterSpacing: 0.3,
+  },
+
+  // Special endgame highlighting
+  endgameHighlight: {
+    backgroundColor: '#C41E3A', // Casino red for instant endgame
+    borderTopColor: '#FF6B85',
+    borderLeftColor: '#FF6B85',
+    borderRightColor: '#8B0000',
+    borderBottomColor: '#8B0000',
+  },
+  endgameHighlightText: {
+    color: '#FFFFFF', // White text on red background
+    fontWeight: 'bold',
   },
 })
