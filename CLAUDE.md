@@ -44,6 +44,28 @@ This document serves as a running memory for development decisions, strategies, 
 - ✅ **Visual indicators** - red highlighting and "⚡ INSTANT ENDGAME" text for quick testing setup
 - **Result**: Complete endgame implementation with powerful testing capabilities for sum-based bidding
 
+### v0.6.6 - Game History & Action Tracking (July 2025) - **✅ COMPLETED**
+- ✅ **Game log restoration** - brought back visible game history displaying all actions and challenge results
+- ✅ **GameHistory component** - created comprehensive action tracking with casino-themed styling
+- ✅ **Three-section layout** - reorganized GameBoard into History | Player | Bidding sections
+- ✅ **Action formatting** - proper display of bids, challenges, dice losses, and game outcomes
+- ✅ **Endgame awareness** - history correctly formats sum-based vs quantity-based actions
+- ✅ **Auto-scroll functionality** - automatically scrolls to show latest actions as they occur
+- ✅ **Height constraints** - fixed scrolling issues with proper container height limits (150px)
+- ✅ **Visual enhancements** - added "GAME LOG" header, action icons, timestamps, and color-coded borders
+- **Result**: Complete action tracking system that enhances gameplay visibility and debugging
+
+### v0.6.7 - Bidding Interface UX Redesign (July 2025) - **✅ COMPLETED**
+- ✅ **Eliminated button spam** - replaced annoying +/- stepper with efficient multi-increment system
+- ✅ **Multi-increment buttons** - [−5] [−1] [value] [+1] [+5] for quick quantity adjustment
+- ✅ **Tappable value display** - tap quantity number to open numeric keypad for exact entry
+- ✅ **Better defaults** - start with minimum legal bid instead of complex percentage calculations
+- ✅ **Context display** - show "X dice on table" for better bidding context
+- ✅ **Mobile-optimized** - larger touch targets and improved visual hierarchy
+- ✅ **Reliable input** - button-based approach works consistently across all platforms
+- ✅ **Range validation** - automatic bounds checking prevents invalid bids
+- **Result**: Fast, reliable bid construction that eliminates mobile UX friction and supports quick decision-making
+
 ### Key Technical Fixes (Historical)
 1. **AI Player Count**: Fixed hardcoded `max_players: 4` in GameContext to use actual `playerCount`
 2. **Game History**: Fixed GameEngine recreation issue causing empty history

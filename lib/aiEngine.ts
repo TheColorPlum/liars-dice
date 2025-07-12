@@ -27,8 +27,12 @@ export class AIEngine {
     const ownDie = player.dice[0]
 
     if (!currentBid) {
-      // Initial bid - bid own die value plus small buffer (conservative)
-      const initialSum = Math.min(12, ownDie + 2)
+      // Initial bid - use difficulty to vary aggressiveness
+      // Easy: more conservative (+1), Medium: balanced (+2), Hard: more aggressive (+3)
+      const aggressivenessBuffer = this.difficulty.bidAcceptanceThreshold > -0.1 ? 1 : 
+                                  this.difficulty.bidAcceptanceThreshold > -0.2 ? 2 : 3
+      const initialSum = Math.min(12, ownDie + aggressivenessBuffer)
+      
       return {
         shouldChallenge: false,
         bid: {
@@ -39,32 +43,66 @@ export class AIEngine {
       }
     }
 
-    // Challenge if bid exceeds maximum possible sum
+    // Calculate confidence in current bid using endgame-specific logic
+    const confidence = this.calculateEndgameConfidence(currentBid.face_value, ownDie)
+    
+    // Use existing difficulty threshold for challenge decision
+    if (confidence < this.difficulty.challengeThreshold) {
+      return { shouldChallenge: true }
+    }
+
+    // Challenge if bid exceeds maximum possible sum (always)
     const maxPossibleSum = ownDie + 6 // Our die + maximum opponent die (6)
     if (currentBid.face_value > maxPossibleSum) {
       return { shouldChallenge: true }
     }
 
-    // Challenge if bid is getting too close to maximum (slightly aggressive)
-    if (currentBid.face_value >= maxPossibleSum - 2) {
-      return { shouldChallenge: true }
-    }
-
-    // Make conservative bid increase if reasonable
+    // Try to make next bid if confidence allows
     const nextSum = currentBid.face_value + 1
     if (nextSum <= 12) {
-      return {
-        shouldChallenge: false,
-        bid: {
-          quantity: 1, // Quantity is ignored in endgame
-          face_value: nextSum,
-          player_id: player.id
+      const nextBidConfidence = this.calculateEndgameConfidence(nextSum, ownDie)
+      
+      // Use existing difficulty threshold for bid acceptance
+      if (nextBidConfidence >= this.difficulty.bidAcceptanceThreshold) {
+        return {
+          shouldChallenge: false,
+          bid: {
+            quantity: 1, // Quantity is ignored in endgame
+            face_value: nextSum,
+            player_id: player.id
+          }
         }
       }
     }
 
-    // If we can't bid higher, challenge
+    // If no confident bid can be made, challenge
     return { shouldChallenge: true }
+  }
+
+  // Calculate confidence in an endgame bid (adapting existing confidence pattern)
+  private calculateEndgameConfidence(bidSum: number, ownDie: number): number {
+    const maxPossibleSum = ownDie + 6  // Our die + max opponent die (6)
+    const minPossibleSum = ownDie + 1  // Our die + min opponent die (1)
+    
+    // If bid is impossible, maximum negative confidence
+    if (bidSum > maxPossibleSum) {
+      return -1.0
+    }
+    
+    // If bid is guaranteed (our die alone exceeds it), maximum confidence
+    if (bidSum < minPossibleSum) {
+      return 1.0
+    }
+    
+    // Calculate confidence based on how much "room" we have
+    // Higher bids (closer to maximum) are less confident
+    // This mirrors the existing confidence calculation pattern
+    const range = maxPossibleSum - minPossibleSum
+    const position = bidSum - minPossibleSum
+    const confidence = 1.0 - (position / range)
+    
+    // Scale to match existing confidence range (-1 to 1)
+    return (confidence * 2) - 1
   }
 
   // Generate move for normal game scenario

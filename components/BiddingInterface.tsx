@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { Bid } from '../types/game'
-import { QuantityStepper } from './QuantityStepper'
+import { HybridQuantityInput } from './HybridQuantityInput'
 import { PixelButtonCSS } from './PixelButtonCSS'
 
 interface BiddingInterfaceProps {
@@ -21,28 +21,38 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
   variant = 'full',
   isEndgame = false
 }) => {
-  // Calculate smart initial values and bounds
+  // Calculate simple bounds and initial values
   const getSmartBounds = () => {
+    let bounds
     if (isEndgame) {
       // In endgame, we bid on sum of dice (2-12)
       if (!currentBid) {
-        return { min: 2, max: 12, initial: 7 } // Conservative first bid
+        bounds = { min: 2, max: 12, initial: 7 } // Conservative first bid
       } else {
-        return { min: currentBid.face_value + 1, max: 12, initial: Math.min(12, currentBid.face_value + 1) }
+        bounds = { min: currentBid.face_value + 1, max: 12, initial: Math.min(12, currentBid.face_value + 1) }
+      }
+    } else {
+      if (!currentBid) {
+        // First bid: simple starting range
+        const minQuantity = 1
+        const maxQuantity = totalDice
+        bounds = { min: minQuantity, max: maxQuantity, initial: 2 } // Start with 2 as reasonable opening
+      } else {
+        // Subsequent bids: must be higher than current
+        const minQuantity = currentBid.quantity
+        const maxQuantity = totalDice
+        bounds = { min: minQuantity, max: maxQuantity, initial: currentBid.quantity + 1 }
       }
     }
     
-    if (!currentBid) {
-      // First bid: reasonable range based on total dice
-      const minQuantity = 1
-      const maxQuantity = Math.max(Math.floor(totalDice * 0.6), 8) // 60% of total dice or 8, whichever is higher
-      return { min: minQuantity, max: maxQuantity, initial: Math.max(Math.floor(totalDice * 0.15), 2) }
-    } else {
-      // Subsequent bids: must be higher than current
-      const minQuantity = currentBid.quantity
-      const maxQuantity = Math.min(totalDice, currentBid.quantity + Math.max(Math.floor(totalDice * 0.3), 5))
-      return { min: minQuantity, max: maxQuantity, initial: currentBid.quantity + 1 }
-    }
+    console.log('🎲 BiddingInterface bounds:', {
+      currentBid,
+      isEndgame,
+      totalDice,
+      calculated: bounds
+    })
+    
+    return bounds
   }
 
   const [selectedQuantity, setSelectedQuantity] = useState(1)
@@ -52,6 +62,13 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
   // Update bounds and selected values when currentBid or endgame state changes
   useEffect(() => {
     const bounds = getSmartBounds()
+    console.log('🔄 BiddingInterface useEffect setting values:', {
+      isEndgame,
+      bounds,
+      currentSelectedQuantity: selectedQuantity,
+      currentSelectedSum: selectedSum
+    })
+    
     if (isEndgame) {
       setSelectedSum(bounds.initial)
     } else {
@@ -142,6 +159,7 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
         <Text style={styles.compactBidText}>
           {isEndgame === true ? `Sum: ${selectedSum}` : `${selectedQuantity} × ${selectedFaceValue}`}
         </Text>
+        <Text style={styles.compactContext}>{totalDice} dice on table</Text>
         
         <View style={styles.compactControls}>
           {isEndgame === true ? (
@@ -171,26 +189,17 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
             </View>
           ) : (
             <>
-              {/* Normal Game Controls */}
+              {/* Normal Game Controls - Use Hybrid Input */}
               <View style={styles.quantitySection}>
                 <Text style={styles.sectionLabel}>QTY</Text>
-                <View style={styles.simpleQuantityControls}>
-                  <PixelButtonCSS
-                    text="−"
-                    onPress={() => setSelectedQuantity(Math.max(getSmartBounds().min, selectedQuantity - 1))}
-                    disabled={selectedQuantity <= getSmartBounds().min}
-                    color="silver"
-                    size="small"
-                    style={styles.stepperButton}
-                  />
-                  <Text style={styles.quantityValue}>{selectedQuantity}</Text>
-                  <PixelButtonCSS
-                    text="+"
-                    onPress={() => setSelectedQuantity(Math.min(getSmartBounds().max, selectedQuantity + 1))}
-                    disabled={selectedQuantity >= getSmartBounds().max}
-                    color="silver"
-                    size="small"
-                    style={styles.stepperButton}
+                <View style={styles.compactHybridContainer}>
+                  <HybridQuantityInput
+                    value={selectedQuantity}
+                    onValueChange={setSelectedQuantity}
+                    min={getSmartBounds().min}
+                    max={getSmartBounds().max}
+                    totalDice={totalDice}
+                    label=""
                   />
                 </View>
               </View>
@@ -291,7 +300,7 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
           </View>
         ) : (
           <>
-            <QuantityStepper
+            <HybridQuantityInput
               value={selectedQuantity}
               onValueChange={setSelectedQuantity}
               min={getSmartBounds().min}
@@ -368,7 +377,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   faceButton: {
-    margin: 4,
+    margin: 6,
+    minWidth: 48,
+    minHeight: 48,
   },
   selectedBidLabel: {
     color: '#f5f5dc', // Cream
@@ -401,8 +412,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'PressStart2P_400Regular',
     color: '#f5f5dc', // Cream
-    marginBottom: 16,
+    marginBottom: 8,
     letterSpacing: 1,
+  },
+  compactContext: {
+    fontSize: 11,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#d4af37', // Gold
+    marginBottom: 16,
+    letterSpacing: 0.5,
   },
   compactControls: {
     alignItems: 'center',
@@ -413,6 +431,10 @@ const styles = StyleSheet.create({
   // Quantity Section
   quantitySection: {
     alignItems: 'center',
+  },
+  compactHybridContainer: {
+    width: '100%',
+    minHeight: 80,
   },
   sectionLabel: {
     fontSize: 10,
@@ -445,7 +467,7 @@ const styles = StyleSheet.create({
   compactFaceButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 4,
+    gap: 8,
   },
   compactActionButtons: {
     flexDirection: 'row',
