@@ -242,9 +242,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
           </View>
         </View>
 
-        {/* Bottom Row - Player and Bidding */}
+        {/* Bottom Row - History, Player and Bidding */}
         <View style={styles.bottomRow}>
-          {/* Player Section */}
+          {/* Game History - Left Side */}
+          <View style={styles.historySection}>
+            <GameHistory
+              actions={gameEngine?.getActions() || []}
+              players={gameState.players.reduce((acc, player) => {
+                acc[player.id] = player.username
+                return acc
+              }, {} as { [id: string]: string })}
+              isEndgame={isEndgame || false}
+            />
+          </View>
+
+          {/* Player Section - Center */}
           {humanPlayer && (
             <View style={styles.playerSection}>
               <PlayerCard
@@ -439,7 +451,15 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
 
-
+  // History Section
+  historySection: {
+    flex: 1,
+    marginRight: 16,
+    maxWidth: 200,
+    minWidth: 150,
+    height: 150,
+    maxHeight: 150,
+  },
 
   // Game Over Modal
   gameOverContainer: {

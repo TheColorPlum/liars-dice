@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { GameAction } from '../types/game'
 import { CasinoTheme } from '../lib/theme'
@@ -10,6 +10,16 @@ interface GameHistoryProps {
 }
 
 export const GameHistory: React.FC<GameHistoryProps> = ({ actions, players, isEndgame = false }) => {
+  const scrollViewRef = useRef<ScrollView>(null)
+
+  // Auto-scroll to bottom when new actions are added
+  useEffect(() => {
+    if (actions.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true })
+      }, 100)
+    }
+  }, [actions.length])
   const formatAction = (action: GameAction): string => {
     const playerName = players[action.player_id] || 'Unknown'
     
@@ -104,7 +114,17 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ actions, players, isEn
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerText}>GAME LOG</Text>
+      </View>
+      
+      {/* Scrollable History */}
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+      >
         {actions.length === 0 ? (
           <Text style={styles.emptyText}>No actions yet...</Text>
         ) : (
@@ -131,12 +151,11 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ actions, players, isEn
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    height: '100%',
     backgroundColor: 'transparent',
     borderRadius: 0,
     padding: 0,
     margin: 0,
-    minHeight: 150,
   },
   scrollView: {
     flex: 1,
@@ -195,5 +214,22 @@ const styles = StyleSheet.create({
   },
   defaultAction: {
     borderLeftColor: CasinoTheme.colors.gray,
+  },
+  header: {
+    backgroundColor: CasinoTheme.colors.charcoal,
+    borderRadius: CasinoTheme.borderRadius.sm,
+    paddingVertical: CasinoTheme.spacing.sm,
+    paddingHorizontal: CasinoTheme.spacing.md,
+    marginBottom: CasinoTheme.spacing.sm,
+    borderWidth: 1,
+    borderColor: CasinoTheme.colors.goldDark,
+    alignItems: 'center',
+  },
+  headerText: {
+    color: CasinoTheme.colors.gold,
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    ...CasinoTheme.fonts.heading,
   },
 })
