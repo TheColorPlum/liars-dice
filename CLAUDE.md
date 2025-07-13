@@ -5,9 +5,9 @@ This document serves as a running memory for development decisions, strategies, 
 ## Project Overview
 - **Tech Stack**: Expo (React Native), TypeScript, Supabase
 - **Target**: Cross-platform mobile game (iOS/Android)
-- **Current Status**: v0.6.5 - Endgame functionality and testing features complete
-- **Latest Achievement**: Implemented missing 1v1 endgame sum-based bidding + dice count selection for testing
-- **Next Phase**: v0.7.0 - Advanced features and social systems
+- **Current Status**: v0.6.8 - Critical bug fixes and game logic stabilization complete
+- **Latest Achievement**: Fixed challenge timing/AI bidding bugs, implemented robust dramatic sequences with accurate dice display
+- **Next Phase**: v0.7.0 - Visual polish and UI cleanup
 
 ## Development History
 
@@ -65,6 +65,16 @@ This document serves as a running memory for development decisions, strategies, 
 - ✅ **Reliable input** - button-based approach works consistently across all platforms
 - ✅ **Range validation** - automatic bounds checking prevents invalid bids
 - **Result**: Fast, reliable bid construction that eliminates mobile UX friction and supports quick decision-making
+
+### v0.6.8 - Critical Bug Fixes & Game Logic Stabilization (July 2025) - **✅ COMPLETED**
+- ✅ **Challenge timing bug** - fixed dice being re-rolled before dramatic sequence could show correct dice
+- ✅ **Challenge round transition** - fixed bidding interface not appearing after challenge completion
+- ✅ **AI bidding logic** - fixed overly aggressive bidding by reducing expected dice calculations
+- ✅ **AI confidence thresholds** - replaced hardcoded values with difficulty-based settings
+- ✅ **Dice state preservation** - added captured_dice_state to preserve dice used in challenge calculations
+- ✅ **Pending round transitions** - delayed round start until UI sequences complete properly
+- ✅ **State synchronization** - improved GameContext state management for challenge sequences
+- **Result**: Robust, stable game logic with accurate challenge sequences and proper turn transitions
 
 ## Next Phase: Visual Polish & UI Cleanup
 
