@@ -146,8 +146,8 @@ export class AIEngine {
     // Calculate confidence in current bid
     const confidence = this.calculateBidConfidence(currentBid, ownDice, totalDice, ownDice.length)
     
-    // More aggressive challenging - use working implementation thresholds
-    if (confidence < -0.35) {
+    // Use difficulty-based challenge threshold
+    if (confidence < this.difficulty.challengeThreshold) {
       return { shouldChallenge: true }
     }
 
@@ -156,7 +156,7 @@ export class AIEngine {
     if (nextBid) {
       const bidConfidence = this.calculateBidConfidence(nextBid, ownDice, totalDice, ownDice.length)
       
-      if (bidConfidence >= -0.15) {
+      if (bidConfidence >= this.difficulty.bidAcceptanceThreshold) {
         return {
           shouldChallenge: false,
           bid: nextBid
@@ -275,16 +275,23 @@ export class AIEngine {
       const value = Number(valueStr)
       if (count === 0) return
 
+      // Fix: Allow AI to increase face value with same quantity OR increase quantity
       const minQuantity = currentBid ? 
-        (currentBid.quantity === undefined || currentBid.face_value > value ? currentBid.quantity + 1 : currentBid.quantity) : 1
-      const maxQuantity = Math.min(totalDice, count + Math.ceil((totalDice - ownDice.length) * 0.5))
+        (value > currentBid.face_value ? currentBid.quantity : currentBid.quantity + 1) : 1
+      
+      // More conservative bidding - only bid slightly above what we have
+      // Expected other dice: roughly 1/3 for face value + 1/6 for ones = 1/2 per die total
+      const otherDice = totalDice - ownDice.length
+      const expectedFromOthers = Math.floor(otherDice * 0.33) // Conservative 1/3 expectation
+      const maxQuantity = Math.min(totalDice, count + expectedFromOthers)
 
       for (let qty = minQuantity; qty <= maxQuantity; qty++) {
         const bid: Bid = { quantity: qty, face_value: value, player_id: player.id }
         
         if (this.isValidBid(bid, currentBid)) {
           const confidence = this.calculateBidConfidence(bid, ownDice, totalDice, ownDice.length)
-          if (confidence >= -0.15) {
+          // Use difficulty-based threshold instead of hardcoded -0.15
+          if (confidence >= this.difficulty.bidAcceptanceThreshold) {
             possibleBids.push(bid)
           }
         }
@@ -295,20 +302,20 @@ export class AIEngine {
       return null
     }
 
-    // Find bid with highest confidence
-    let bestBid = possibleBids[0]
-    let bestScore = this.calculateBidConfidence(bestBid, ownDice, totalDice, ownDice.length)
-
-    for (const bid of possibleBids) {
-      const confidence = this.calculateBidConfidence(bid, ownDice, totalDice, ownDice.length)
-      const valueBonus = bid.face_value / 20 // Small bonus for higher values
-      const score = confidence + valueBonus
-      
-      if (score > bestScore) {
-        bestScore = score
-        bestBid = bid
-      }
-    }
+    // Add variety to AI bid selection - don't always pick highest confidence
+    const topBids = possibleBids
+      .map(bid => ({
+        bid,
+        confidence: this.calculateBidConfidence(bid, ownDice, totalDice, ownDice.length),
+        variety: Math.random() * 0.1 // Small random factor for variety
+      }))
+      .sort((a, b) => (b.confidence + b.variety) - (a.confidence + a.variety))
+    
+    // Pick from top 3 bids for variety
+    const topChoices = topBids.slice(0, Math.min(3, topBids.length))
+    const selectedChoice = topChoices[Math.floor(Math.random() * topChoices.length)]
+    
+    let bestBid = selectedChoice.bid
 
     return bestBid
   }

@@ -89,11 +89,6 @@ export const HybridQuantityInput: React.FC<HybridQuantityInputProps> = ({
           style={styles.incrementButton}
         />
       </View>
-      
-      {/* Context Information */}
-      <Text style={styles.contextText}>
-        {totalDice} dice on table • Range: {min}-{max}
-      </Text>
 
       {/* Text Input Modal */}
       <Modal
@@ -178,12 +173,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     ...CasinoTheme.fonts.numbers,
-  },
-  contextText: {
-    color: CasinoTheme.colors.grayLight,
-    fontSize: 11,
-    textAlign: 'center',
-    ...CasinoTheme.fonts.body,
   },
   
   // Modal styles

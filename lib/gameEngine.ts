@@ -126,6 +126,16 @@ export class GameEngine {
     let challengeSuccessful: boolean
     let actualCount: number
 
+    // CRITICAL: Capture current dice state before any modifications
+    const capturedDiceState = this.gameState.players.map(player => ({
+      id: player.id,
+      username: player.username,
+      dice: [...player.dice], // Deep copy of dice array
+      dice_count: player.dice_count,
+      is_active: player.is_active,
+      is_ai: player.is_ai
+    }))
+
     if (this.isEndgame()) {
       // In endgame, calculate sum of both dice
       actualCount = this.calculateEndgameDiceSum()
@@ -153,7 +163,8 @@ export class GameEngine {
         bid: currentBid,
         total_dice: actualCount,
         successful: challengeSuccessful,
-        is_endgame: this.isEndgame()
+        is_endgame: this.isEndgame(),
+        captured_dice_state: capturedDiceState // Store the dice that were actually counted
       },
       timestamp: new Date()
     })
@@ -162,20 +173,26 @@ export class GameEngine {
     const willBeEliminated = this.gameState.players[loserIndex].dice_count === 1
     this.removeDieFromPlayer(loserId)
 
-    // Start a new round if the game isn't over
-    if (!this.gameState.is_game_over) {
-      // Set the next player based on challenge outcome
-      if (willBeEliminated) {
-        // If player was eliminated, next player should be the one after their position
-        this.gameState.current_player_index = this.findNextActivePlayer(loserIndex - 1)
-      } else {
-        // If no elimination, loser of the challenge goes first
-        this.gameState.current_player_index = loserIndex
-      }
-      this.startNewRound()
+    // Store round transition info but DON'T start new round yet
+    // The UI will call completeChallengeSequence() when dramatic sequence is done
+    this.gameState.pending_round_transition = {
+      next_player_index: willBeEliminated 
+        ? this.findNextActivePlayer(loserIndex - 1)
+        : loserIndex
     }
 
     return { success: true, challengeSuccessful, loserId }
+  }
+
+  // Complete the challenge sequence and start new round
+  // This should be called by the UI after the dramatic sequence finishes
+  completeChallengeSequence(): void {
+    if (this.gameState.pending_round_transition && !this.gameState.is_game_over) {
+      // Set the next player and start new round
+      this.gameState.current_player_index = this.gameState.pending_round_transition.next_player_index
+      this.gameState.pending_round_transition = undefined
+      this.startNewRound()
+    }
   }
 
   // Count total dice of a specific face value (including ones if wild)

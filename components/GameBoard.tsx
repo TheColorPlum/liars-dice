@@ -7,7 +7,7 @@ import { PlayerCard } from './PlayerCard'
 import { DiceDisplay } from './DiceDisplay'
 import { BiddingInterface } from './BiddingInterface'
 import { GameHistory } from './GameHistory'
-import { ChallengeResult } from './ChallengeResult'
+import { DramaticChallengeResult } from './DramaticChallengeResult'
 import { TurnIndicator } from './TurnIndicator'
 import { RoundTransition } from './RoundTransition'
 import { PixelButtonCSS } from './PixelButtonCSS'
@@ -19,15 +19,16 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
-  const { gameState, gameEngine, makeMove, processAIMove, resetGame, isEndgame } = useGame()
+  const { gameState, gameEngine, makeMove, processAIMove, completeChallengeSequence, resetGame, isEndgame } = useGame()
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
   const [showChallengeResult, setShowChallengeResult] = useState(false)
   const [challengeResultData, setChallengeResultData] = useState<{
     challengedBid: Bid | null
-    actualCount: number
     challengeSuccessful: boolean
     challengerName: string
     bidderName: string
+    players: Player[]
+    capturedDiceState?: Player[]
   } | null>(null)
   const [showRoundTransition, setShowRoundTransition] = useState(false)
   const [roundTransitionData, setRoundTransitionData] = useState<{
@@ -38,13 +39,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
   } | null>(null)
   const [lastRoundNumber, setLastRoundNumber] = useState(1)
   const [lastActivePlayers, setLastActivePlayers] = useState<string[]>([])
+  const [isGameLogExpanded, setIsGameLogExpanded] = useState(false)
+  const [processedChallengeActionIds, setProcessedChallengeActionIds] = useState<Set<string>>(new Set())
+  const [isDramaticSequenceActive, setIsDramaticSequenceActive] = useState(false)
 
   // Handle AI moves - similar to working implementation
   useEffect(() => {
     if (gameState && 
         gameEngine &&
         !gameState.is_game_over &&
-        gameState.phase === 'bidding') {
+        gameState.phase === 'bidding' &&
+        !isDramaticSequenceActive) { // Pause AI moves during dramatic sequence
       
       const currentPlayer = gameEngine.getCurrentPlayer()
       
@@ -63,35 +68,59 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
         return () => clearTimeout(aiMoveTimeout)
       }
     }
-  }, [gameState, gameEngine, processAIMove])
+  }, [gameState, gameEngine, processAIMove, isDramaticSequenceActive])
 
-  // Watch for challenge actions to show results
+  // Watch for challenge actions to show dramatic results
   useEffect(() => {
     if (gameEngine) {
       const actions = gameEngine.getActions()
-      const lastAction = actions[actions.length - 1]
+      const challengeActions = actions.filter(a => a.type === 'challenge')
       
-      if (lastAction && lastAction.type === 'challenge' && lastAction.data) {
-        const challengeData = lastAction.data as {
-          bid: Bid
-          total_dice: number
-          successful: boolean
+      // Find unprocessed challenge actions
+      const unprocessedChallenges = challengeActions.filter(action => {
+        const actionId = `${action.timestamp.getTime()}_${action.player_id}`
+        return !processedChallengeActionIds.has(actionId)
+      })
+      
+      if (unprocessedChallenges.length > 0) {
+        // Process the most recent unprocessed challenge
+        const challengeAction = unprocessedChallenges[unprocessedChallenges.length - 1]
+        
+        if (challengeAction.data) {
+          const challengeData = challengeAction.data as {
+            bid: Bid
+            total_dice: number
+            successful: boolean
+            is_endgame?: boolean
+            captured_dice_state?: Player[]
+          }
+          
+          console.log('🎯 Starting dramatic challenge sequence!')
+          
+          const challengerName = gameState?.players.find(p => p.id === challengeAction.player_id)?.username || 'Unknown'
+          const bidderName = gameState?.players.find(p => p.id === challengeData.bid.player_id)?.username || 'Unknown'
+          
+          // Mark this challenge as processed
+          const actionId = `${challengeAction.timestamp.getTime()}_${challengeAction.player_id}`
+          setProcessedChallengeActionIds(prev => new Set([...prev, actionId]))
+          
+          // Activate dramatic sequence (this will pause AI moves)
+          console.log('🎭 Pausing AI moves for dramatic sequence')
+          setIsDramaticSequenceActive(true)
+          
+          setChallengeResultData({
+            challengedBid: challengeData.bid,
+            challengeSuccessful: challengeData.successful,
+            challengerName,
+            bidderName,
+            players: [...(gameState?.players || [])], // Current state for display logic
+            capturedDiceState: challengeData.captured_dice_state // The dice that were actually counted
+          })
+          setShowChallengeResult(true)
         }
-        
-        const challengerName = gameState?.players.find(p => p.id === lastAction.player_id)?.username || 'Unknown'
-        const bidderName = gameState?.players.find(p => p.id === challengeData.bid.player_id)?.username || 'Unknown'
-        
-        setChallengeResultData({
-          challengedBid: challengeData.bid,
-          actualCount: challengeData.total_dice,
-          challengeSuccessful: challengeData.successful,
-          challengerName,
-          bidderName
-        })
-        setShowChallengeResult(true)
       }
     }
-  }, [gameEngine?.getActions().length, gameState?.players])
+  }, [gameEngine?.getActions().length])
 
   // Watch for round changes and player eliminations
   useEffect(() => {
@@ -198,81 +227,52 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
         />
       </View>
 
-      {/* Game Table Layout - Matching Mockup */}
+      {/* Center-Focused Vertical Layout */}
       <View style={styles.gameTable}>
         
-        {/* Top Row - Opponent Cards */}
-        <View style={styles.opponentsRow}>
+        {/* Simplified Opponents - Dice Count Only */}
+        <View style={styles.opponentsBar}>
           {gameState.players
             .filter(player => player.is_ai)
-            .slice(0, 3) // Show max 3 opponents in top row
             .map((player, index) => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                isCurrentPlayer={index === gameState.current_player_index}
-                isHumanPlayer={false}
-                variant="opponent"
-              />
+              <View key={player.id} style={styles.opponentSummary}>
+                <Text style={styles.opponentName}>{player.username}</Text>
+                <Text style={styles.opponentDiceCount}>{player.dice_count} dice</Text>
+              </View>
             ))}
         </View>
 
-        {/* Center Area - Current Bid Display */}
-        <View style={styles.centerArea}>
-          <View style={styles.centerBidDisplay}>
-            <Text style={styles.centerBidLabel}>{isEndgame === true ? 'FINAL SHOWDOWN' : 'CURRENT BID'}</Text>
-            <View style={styles.centerBidValueContainer}>
-              <Text style={styles.centerBidValue}>
-                {gameState.current_bid 
-                  ? (isEndgame === true 
-                      ? `Sum: ${gameState.current_bid.face_value}` 
-                      : `${gameState.current_bid.quantity} × ${gameState.current_bid.face_value}`)
-                  : (isEndgame === true ? 'BID TOTAL SUM' : 'NO BID')}
-              </Text>
-            </View>
+        {/* Current Bid - Prominent Display */}
+        <View style={styles.currentBidSection}>
+          <Text style={styles.currentBidLabel}>{isEndgame === true ? 'FINAL SHOWDOWN' : 'CURRENT BID'}</Text>
+          <View style={styles.currentBidContainer}>
+            <Text style={styles.currentBidValue}>
+              {gameState.current_bid 
+                ? (isEndgame === true 
+                    ? `Sum: ${gameState.current_bid.face_value}` 
+                    : `${gameState.current_bid.quantity} × ${gameState.current_bid.face_value}`)
+                : (isEndgame === true ? 'BID TOTAL SUM' : 'NO BID')}
+            </Text>
           </View>
-          
-          {/* Turn Indicator - Smaller, less prominent */}
-          <View style={styles.smallTurnIndicator}>
-            <TurnIndicator
-              currentPlayer={currentPlayer}
-              isHumanTurn={Boolean(isHumanTurn)}
-              gamePhase={gameState.phase}
-            />
-          </View>
+          <Text style={styles.diceCountInfo}>
+            {gameEngine.getTotalDiceCount()} dice on table
+          </Text>
         </View>
 
-        {/* Bottom Row - History, Player and Bidding */}
-        <View style={styles.bottomRow}>
-          {/* Game History - Left Side */}
-          <View style={styles.historySection}>
-            <GameHistory
-              actions={gameEngine?.getActions() || []}
-              players={gameState.players.reduce((acc, player) => {
-                acc[player.id] = player.username
-                return acc
-              }, {} as { [id: string]: string })}
-              isEndgame={isEndgame || false}
-            />
-          </View>
-
-          {/* Player Section - Center */}
-          {humanPlayer && (
-            <View style={styles.playerSection}>
-              <PlayerCard
-                player={humanPlayer}
-                isCurrentPlayer={humanPlayer.id === currentPlayer?.id}
-                isHumanPlayer={true}
-                variant="self"
-              />
+        {/* Player Dice - Primary Focus */}
+        {humanPlayer && (
+          <View style={styles.playerDiceSection}>
+            <Text style={styles.yourDiceLabel}>YOUR DICE</Text>
+            <View style={styles.primaryDiceDisplay}>
               <DiceDisplay dice={humanPlayer.dice} />
             </View>
-          )}
+          </View>
+        )}
 
-          {/* Bidding Interface - Right Side */}
-          <View style={styles.biddingSection}>
-            {/* Bidding Controls - Only show when it's human's turn */}
-            {isHumanTurn && gameState.phase === 'bidding' && (
+        {/* Quick Actions - Immediate Access */}
+        <View style={styles.quickActionsSection}>
+          {isHumanTurn && gameState.phase === 'bidding' && (
+            <View style={styles.quickBiddingControls}>
               <BiddingInterface
                 currentBid={gameState.current_bid}
                 onBid={handleBid}
@@ -281,8 +281,35 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
                 variant="compact"
                 isEndgame={isEndgame || false}
               />
-            )}
-          </View>
+            </View>
+          )}
+        </View>
+
+        {/* Game Log - Expandable */}
+        <View style={styles.gameLogContainer}>
+          <TouchableOpacity 
+            style={styles.gameLogHeader} 
+            onPress={() => setIsGameLogExpanded(!isGameLogExpanded)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.gameLogTitle}>GAME LOG</Text>
+            <Text style={styles.gameLogToggle}>
+              {isGameLogExpanded ? '▼' : '▲'}
+            </Text>
+          </TouchableOpacity>
+
+          {isGameLogExpanded && (
+            <View style={styles.gameLogExpanded}>
+              <GameHistory
+                actions={gameEngine?.getActions() || []}
+                players={gameState.players.reduce((acc, player) => {
+                  acc[player.id] = player.username
+                  return acc
+                }, {} as { [id: string]: string })}
+                isEndgame={isEndgame || false}
+              />
+            </View>
+          )}
         </View>
 
       </View>
@@ -305,17 +332,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
         </View>
       )}
 
+      
       {challengeResultData && (
-        <ChallengeResult
+        <DramaticChallengeResult
           isVisible={showChallengeResult}
           challengedBid={challengeResultData.challengedBid}
-          actualCount={challengeResultData.actualCount}
           challengeSuccessful={challengeResultData.challengeSuccessful}
           challengerName={challengeResultData.challengerName}
           bidderName={challengeResultData.bidderName}
-          onHide={() => {
+          players={challengeResultData.players}
+          capturedDiceState={challengeResultData.capturedDiceState}
+          isEndgame={isEndgame || false}
+          onComplete={() => {
             setShowChallengeResult(false)
             setChallengeResultData(null)
+            console.log('🎭 Resuming AI moves and completing challenge sequence')
+            setIsDramaticSequenceActive(false) // Resume AI moves after sequence
+            
+            // Complete the challenge sequence (start new round with fresh dice)
+            completeChallengeSequence()
           }}
         />
       )}
@@ -364,44 +399,58 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
 
-  // Game Table Layout - Matching Mockup
+  // Game Table - Center-Focused Vertical Layout
   gameTable: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
     justifyContent: 'flex-start',
+    alignItems: 'center',
   },
 
-  // Top Row - Opponents (horizontal row)
-  opponentsRow: {
+  // Simplified Opponents Bar
+  opponentsBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    width: '100%',
     paddingVertical: 8,
     marginBottom: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 8,
   },
-
-  // Center Area - Current bid display and turn indicator
-  centerArea: {
-    justifyContent: 'center',
+  opponentSummary: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 20,
+    paddingHorizontal: 8,
   },
-
-  // Center Bid Display - Main focal point
-  centerBidDisplay: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  centerBidLabel: {
-    fontSize: 18,
+  opponentName: {
+    fontSize: 10,
     fontFamily: 'PressStart2P_400Regular',
     color: '#d4af37', // Gold
-    marginBottom: 16,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  opponentDiceCount: {
+    fontSize: 12,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#f5f5dc', // Cream
+    letterSpacing: 0.5,
+  },
+
+  // Current Bid Section - Prominent
+  currentBidSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    width: '100%',
+  },
+  currentBidLabel: {
+    fontSize: 16,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#d4af37', // Gold
+    marginBottom: 12,
     letterSpacing: 1,
   },
-  centerBidValueContainer: {
+  currentBidContainer: {
     backgroundColor: '#d4af37', // Gold background
     borderWidth: 3,
     borderTopColor: '#FFEC8B', // Gold highlight
@@ -411,55 +460,88 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 20,
     paddingHorizontal: 32,
-    minWidth: 160,
+    minWidth: 200,
     alignItems: 'center',
   },
-  centerBidValue: {
+  currentBidValue: {
     fontSize: 24,
     fontFamily: 'PressStart2P_400Regular',
     color: '#2A2A2A', // Dark text on gold
     textAlign: 'center',
     letterSpacing: 1,
   },
-
-  // Small Turn Indicator
-  smallTurnIndicator: {
-    transform: [{ scale: 0.7 }],
-    opacity: 0.8,
+  diceCountInfo: {
+    fontSize: 14,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#d4af37', // Gold
+    textAlign: 'center',
+    marginTop: 12,
+    letterSpacing: 0.5,
   },
 
-  // Bottom Row - Player + Bidding side by side
-  bottomRow: {
+  // Player Dice Section - Primary Focus
+  playerDiceSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    width: '100%',
+  },
+  yourDiceLabel: {
+    fontSize: 18,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#f5f5dc', // Cream
+    marginBottom: 16,
+    letterSpacing: 1,
+  },
+  primaryDiceDisplay: {
+    transform: [{ scale: 1.2 }], // Make dice larger as primary focus
+  },
+
+  // Quick Actions Section
+  quickActionsSection: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  quickBiddingControls: {
+    width: '100%',
+    maxWidth: 400,
+  },
+
+  // Game Log - Expandable
+  gameLogContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  gameLogHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    marginBottom: 8,
-  },
-
-  // Player Section (left side of bottom row)
-  playerSection: {
-    flex: 1,
     alignItems: 'center',
-    marginRight: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#d4af37',
+  },
+  gameLogTitle: {
+    fontSize: 12,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#d4af37', // Gold
+    letterSpacing: 1,
+  },
+  gameLogToggle: {
+    fontSize: 14,
+    fontFamily: 'PressStart2P_400Regular',
+    color: '#f5f5dc', // Cream
+    letterSpacing: 0.5,
+  },
+  gameLogExpanded: {
+    maxHeight: 250,
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
 
-  // Bidding Section (right side of bottom row)
-  biddingSection: {
-    alignItems: 'center',
-    minWidth: 140,
-    paddingLeft: 8,
-  },
-
-  // History Section
-  historySection: {
-    flex: 1,
-    marginRight: 16,
-    maxWidth: 200,
-    minWidth: 150,
-    height: 150,
-    maxHeight: 150,
-  },
 
   // Game Over Modal
   gameOverContainer: {

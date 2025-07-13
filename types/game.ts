@@ -27,6 +27,9 @@ export interface GameState {
   time_limit: Date | null
   winner_id: string | null
   is_game_over: boolean
+  pending_round_transition?: {
+    next_player_index: number
+  }
 }
 
 export interface GameAction {

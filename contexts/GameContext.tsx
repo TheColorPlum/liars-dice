@@ -14,6 +14,7 @@ interface GameContextType {
   startSinglePlayerGame: (aiDifficulty: 'easy' | 'medium' | 'hard', playerCount: number, startingDice?: number) => void
   makeMove: (move: GameMove) => Promise<boolean>
   processAIMove: () => Promise<boolean>
+  completeChallengeSequence: () => void
   resetGame: () => void
 }
 
@@ -207,7 +208,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         isSinglePlayer
       )
 
-      console.log(`AI ${currentPlayer.username} decision:`, aiMove)
+      console.log(`🤖 AI ${currentPlayer.username} decision:`, aiMove)
 
       let moveSuccess = false
       if (aiMove.shouldChallenge) {
@@ -231,6 +232,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   }
 
+  // Complete challenge sequence - called after dramatic challenge UI finishes
+  const completeChallengeSequence = () => {
+    if (!state.gameEngine) return
+
+    try {
+      state.gameEngine.completeChallengeSequence()
+      const updatedState = state.gameEngine.getGameState()
+      dispatch({ type: 'UPDATE_GAME_STATE', payload: updatedState })
+      console.log('🎯 Challenge sequence completed, game state updated')
+    } catch (error) {
+      console.error('Error completing challenge sequence:', error)
+    }
+  }
+
   // Reset the game
   const resetGame = () => {
     dispatch({ type: 'RESET_GAME' })
@@ -246,6 +261,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     startSinglePlayerGame,
     makeMove,
     processAIMove,
+    completeChallengeSequence,
     resetGame
   }
 

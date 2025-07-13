@@ -59,20 +59,31 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
   const [selectedFaceValue, setSelectedFaceValue] = useState(2) // Start at 2 since 1s are wild
   const [selectedSum, setSelectedSum] = useState(7) // For endgame sum bidding
 
-  // Update bounds and selected values when currentBid or endgame state changes
+  // Update selected values to current bid when turn starts
   useEffect(() => {
-    const bounds = getSmartBounds()
-    console.log('🔄 BiddingInterface useEffect setting values:', {
+    console.log('🔄 BiddingInterface setting default to current bid:', {
       isEndgame,
-      bounds,
+      currentBid,
       currentSelectedQuantity: selectedQuantity,
       currentSelectedSum: selectedSum
     })
     
     if (isEndgame) {
-      setSelectedSum(bounds.initial)
+      // In endgame, set to current sum or default if no bid
+      if (currentBid) {
+        setSelectedSum(currentBid.face_value)
+      } else {
+        setSelectedSum(7) // Default first bid
+      }
     } else {
-      setSelectedQuantity(bounds.initial)
+      // In normal game, set to current bid values or defaults if no bid
+      if (currentBid) {
+        setSelectedQuantity(currentBid.quantity)
+        setSelectedFaceValue(currentBid.face_value)
+      } else {
+        setSelectedQuantity(2) // Default first bid
+        setSelectedFaceValue(2) // Default first bid
+      }
     }
   }, [currentBid, totalDice, isEndgame])
 
@@ -108,6 +119,17 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
     }
     
     return false
+  }
+
+  // Check if user has changed from current bid (required to enable BID button)
+  const hasChangedFromCurrentBid = (): boolean => {
+    if (!currentBid) return true // No current bid, any bid is a change
+    
+    if (isEndgame) {
+      return selectedSum !== currentBid.face_value
+    } else {
+      return selectedQuantity !== currentBid.quantity || selectedFaceValue !== currentBid.face_value
+    }
   }
 
   const handleMakeBid = () => {
@@ -159,11 +181,16 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
         <Text style={styles.compactBidText}>
           {isEndgame === true ? `Sum: ${selectedSum}` : `${selectedQuantity} × ${selectedFaceValue}`}
         </Text>
-        <Text style={styles.compactContext}>{totalDice} dice on table</Text>
+        
+        {/* Must Increase Messaging */}
+        {currentBid && !hasChangedFromCurrentBid() && (
+          <Text style={styles.mustIncreaseText}>
+            MUST INCREASE BID
+          </Text>
+        )}
         
         <View style={styles.compactControls}>
           {isEndgame === true ? (
-            /* Endgame Sum Controls */
             <View style={styles.quantitySection}>
               <Text style={styles.sectionLabel}>SUM</Text>
               <View style={styles.simpleQuantityControls}>
@@ -220,7 +247,7 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
             text="BID"
             onPress={handleMakeBid}
             color="green"
-            disabled={isEndgame === true ? !isValidBid(1, selectedSum, selectedSum) : !isValidBid(selectedQuantity, selectedFaceValue)}
+            disabled={!hasChangedFromCurrentBid() || (isEndgame === true ? !isValidBid(1, selectedSum, selectedSum) : !isValidBid(selectedQuantity, selectedFaceValue))}
             size="small"
             style={styles.compactButton}
           />
@@ -255,7 +282,7 @@ export const BiddingInterface: React.FC<BiddingInterfaceProps> = ({
             text="BID"
             onPress={handleMakeBid}
             color="green"
-            disabled={isEndgame === true ? !isValidBid(1, selectedSum, selectedSum) : !isValidBid(selectedQuantity, selectedFaceValue)}
+            disabled={!hasChangedFromCurrentBid() || (isEndgame === true ? !isValidBid(1, selectedSum, selectedSum) : !isValidBid(selectedQuantity, selectedFaceValue))}
             size="medium"
             style={styles.actionButton}
           />
@@ -412,15 +439,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'PressStart2P_400Regular',
     color: '#f5f5dc', // Cream
-    marginBottom: 8,
+    marginBottom: 16, // Increased margin to compensate for removed context text
     letterSpacing: 1,
-  },
-  compactContext: {
-    fontSize: 11,
-    fontFamily: 'PressStart2P_400Regular',
-    color: '#d4af37', // Gold
-    marginBottom: 16,
-    letterSpacing: 0.5,
   },
   compactControls: {
     alignItems: 'center',

@@ -66,6 +66,27 @@ This document serves as a running memory for development decisions, strategies, 
 - ✅ **Range validation** - automatic bounds checking prevents invalid bids
 - **Result**: Fast, reliable bid construction that eliminates mobile UX friction and supports quick decision-making
 
+## Next Phase: Visual Polish & UI Cleanup
+
+### v0.7.0 - Visual Polish & Asset Integration (Planned)
+Before implementing multiplayer and advanced features, focus on visual consistency and polish:
+- **Asset integration cleanup** - implement pixel art dice and UI elements consistently
+- **Visual hierarchy refinement** - improve spacing, alignment, and component relationships  
+- **Component standardization** - ensure consistent styling patterns across all UI elements
+- **Mobile responsiveness** - optimize layouts for various screen sizes and orientations
+- **Animation polish** - add smooth transitions and micro-interactions for better UX
+- **Theme consistency** - audit and standardize casino color palette usage
+- **Accessibility improvements** - enhance contrast, touch targets, and screen reader support
+- **Performance optimization** - optimize renders and component updates
+- **Goal**: Cohesive, polished visual experience ready for multiplayer and advanced features
+
+### Future Phases (v0.8.0+)
+After visual polish is complete:
+- **Multiplayer implementation** - real-time game sessions with Supabase
+- **Social features** - friend systems, leaderboards, tournaments
+- **Advanced game modes** - custom rules, different variants
+- **Monetization features** - in-app purchases, premium themes
+
 ### Key Technical Fixes (Historical)
 1. **AI Player Count**: Fixed hardcoded `max_players: 4` in GameContext to use actual `playerCount`
 2. **Game History**: Fixed GameEngine recreation issue causing empty history
