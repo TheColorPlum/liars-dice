@@ -7,6 +7,7 @@ import { PlayerCard } from './PlayerCard'
 import { DiceDisplay } from './DiceDisplay'
 import { BiddingInterface } from './BiddingInterface'
 import { GameHistory } from './GameHistory'
+import { GameLogModal } from './GameLogModal'
 import { DramaticChallengeResult } from './DramaticChallengeResult'
 import { TurnIndicator } from './TurnIndicator'
 import { RoundTransition } from './RoundTransition'
@@ -39,7 +40,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
   } | null>(null)
   const [lastRoundNumber, setLastRoundNumber] = useState(1)
   const [lastActivePlayers, setLastActivePlayers] = useState<string[]>([])
-  const [isGameLogExpanded, setIsGameLogExpanded] = useState(false)
+  const [showGameLogModal, setShowGameLogModal] = useState(false)
   const [processedChallengeActionIds, setProcessedChallengeActionIds] = useState<Set<string>>(new Set())
   const [isDramaticSequenceActive, setIsDramaticSequenceActive] = useState(false)
 
@@ -216,7 +217,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header with back button */}
+      {/* Header with back button and game log */}
       <View style={styles.header}>
         <PixelButtonCSS
           text="BACK"
@@ -224,6 +225,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
           color="gold"
           size="small"
           style={styles.backButton}
+        />
+        <PixelButtonCSS
+          text="GAME LOG"
+          onPress={() => setShowGameLogModal(true)}
+          color="silver"
+          size="small"
+          style={styles.gameLogButton}
         />
       </View>
 
@@ -285,32 +293,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
           )}
         </View>
 
-        {/* Game Log - Expandable */}
-        <View style={styles.gameLogContainer}>
-          <TouchableOpacity 
-            style={styles.gameLogHeader} 
-            onPress={() => setIsGameLogExpanded(!isGameLogExpanded)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.gameLogTitle}>GAME LOG</Text>
-            <Text style={styles.gameLogToggle}>
-              {isGameLogExpanded ? '▼' : '▲'}
-            </Text>
-          </TouchableOpacity>
-
-          {isGameLogExpanded && (
-            <View style={styles.gameLogExpanded}>
-              <GameHistory
-                actions={gameEngine?.getActions() || []}
-                players={gameState.players.reduce((acc, player) => {
-                  acc[player.id] = player.username
-                  return acc
-                }, {} as { [id: string]: string })}
-                isEndgame={isEndgame || false}
-              />
-            </View>
-          )}
-        </View>
 
       </View>
 
@@ -368,6 +350,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ onBack }) => {
           }}
         />
       )}
+
+      {/* Game Log Modal */}
+      <GameLogModal
+        isVisible={showGameLogModal}
+        actions={gameEngine?.getActions() || []}
+        players={gameState.players.reduce((acc, player) => {
+          acc[player.id] = player.username
+          return acc
+        }, {} as { [id: string]: string })}
+        isEndgame={isEndgame || false}
+        onClose={() => setShowGameLogModal(false)}
+      />
     </View>
   )
 }
@@ -389,14 +383,20 @@ const styles = StyleSheet.create({
     fontFamily: 'PressStart2P_400Regular',
   },
   
-  // Header - Simple back button
+  // Header - Back button and game log button
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingTop: 50, // Account for status bar
   },
   backButton: {
-    alignSelf: 'flex-start',
+    // PixelButtonCSS will handle its own styling
+  },
+  gameLogButton: {
+    // PixelButtonCSS will handle its own styling
   },
 
   // Game Table - Center-Focused Vertical Layout
@@ -507,40 +507,6 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
 
-  // Game Log - Expandable
-  gameLogContainer: {
-    width: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  gameLogHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#d4af37',
-  },
-  gameLogTitle: {
-    fontSize: 12,
-    fontFamily: 'PressStart2P_400Regular',
-    color: '#d4af37', // Gold
-    letterSpacing: 1,
-  },
-  gameLogToggle: {
-    fontSize: 14,
-    fontFamily: 'PressStart2P_400Regular',
-    color: '#f5f5dc', // Cream
-    letterSpacing: 0.5,
-  },
-  gameLogExpanded: {
-    maxHeight: 250,
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-  },
 
 
   // Game Over Modal

@@ -129,14 +129,14 @@ export class AIEngine {
         .reduce((best, [value, count]) => count > best.count ? { value: Number(value), count } : best,
           { value: 2, count: -1 })
 
-      // Conservative opening bid
+      // Very conservative opening bid - only bid what we have plus a small buffer
       const otherDice = totalDice - ownDice.length
-      const expectedOthers = Math.floor(otherDice * 0.33)
+      const smallBuffer = Math.min(1, Math.floor(otherDice / 8)) // Very small expectation from others
       
       return {
         shouldChallenge: false,
         bid: {
-          quantity: Math.max(1, bestValue.count + expectedOthers),
+          quantity: Math.max(1, bestValue.count + smallBuffer),
           face_value: bestValue.value,
           player_id: player.id
         }
@@ -279,14 +279,21 @@ export class AIEngine {
       const minQuantity = currentBid ? 
         (value > currentBid.face_value ? currentBid.quantity : currentBid.quantity + 1) : 1
       
-      // More conservative bidding - only bid slightly above what we have
-      // Expected other dice: roughly 1/3 for face value + 1/6 for ones = 1/2 per die total
+      // Much more conservative bidding - only bid what we can reasonably support
       const otherDice = totalDice - ownDice.length
-      const expectedFromOthers = Math.floor(otherDice * 0.33) // Conservative 1/3 expectation
-      const maxQuantity = Math.min(totalDice, count + expectedFromOthers)
+      
+      // Only expect a small number from others, not a percentage
+      // This prevents AI from making huge leaps in quantity
+      const maxReasonableIncrease = Math.min(2, Math.floor(otherDice / 6)) // At most 2, or 1 per 6 other dice
+      const maxQuantity = Math.min(totalDice, count + maxReasonableIncrease)
 
       for (let qty = minQuantity; qty <= maxQuantity; qty++) {
         const bid: Bid = { quantity: qty, face_value: value, player_id: player.id }
+        
+        // Sanity check: never bid more than 40% of total dice
+        if (qty > totalDice * 0.4) {
+          continue
+        }
         
         if (this.isValidBid(bid, currentBid)) {
           const confidence = this.calculateBidConfidence(bid, ownDice, totalDice, ownDice.length)
